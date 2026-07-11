@@ -31,11 +31,11 @@ const emit = defineEmits<{ back: []; showHint: [] }>();
                 </button>
                 <div>
                     <h2
-                        class="text-lg font-bold text-slate-900 dark:text-white"
+                        class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
                         {{ level.title }}
                     </h2>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                    <p class="mt-1 text-slate-600 dark:text-slate-400">
                         {{ level.task }}
                     </p>
                 </div>

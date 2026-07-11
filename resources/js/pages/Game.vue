@@ -121,9 +121,25 @@ function backToSelect(): void {
     <Head title="The Eloquenter" />
 
     <div
-        class="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"
+        class="relative min-h-screen bg-amber-50 font-sans text-slate-900 antialiased dark:bg-stone-950 dark:text-slate-100"
     >
-        <div :key="screenKey" class="screen-enter">
+        <svg
+            class="pointer-events-none absolute inset-0 size-full text-accent/10"
+            aria-hidden="true"
+        >
+            <defs>
+                <pattern
+                    id="app-dots"
+                    width="24"
+                    height="24"
+                    patternUnits="userSpaceOnUse"
+                >
+                    <circle cx="1.5" cy="1.5" r="1.5" fill="currentColor" />
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#app-dots)" />
+        </svg>
+        <div :key="screenKey" class="screen-enter relative">
             <StartScreen
                 v-if="screen === 'start'"
                 :highscores="highscores"

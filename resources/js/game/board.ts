@@ -11,9 +11,9 @@ export type DotStatus = 'idle' | 'connected' | 'dragging';
 export interface BoardApi {
     isInteractive(): boolean;
     allColumnsConnectable(): boolean;
-    registerDot(ref: ColumnRef, el: HTMLElement): void;
-    unregisterDot(ref: ColumnRef): void;
-    dotSide(ref: ColumnRef): AnchorSide;
+    registerDot(ref: ColumnRef, side: AnchorSide, el: HTMLElement): void;
+    unregisterDot(ref: ColumnRef, side: AnchorSide): void;
+    dotSides(ref: ColumnRef): AnchorSide[];
     dotStatus(ref: ColumnRef): DotStatus;
     startDrag(ref: ColumnRef, event: PointerEvent): void;
 }

@@ -13,7 +13,7 @@ use App\Models\Video;
 
 /**
  * The curriculum. Level ids are persisted in players' browsers as progress
- * keys — never renumber existing ids when inserting or reordering levels.
+ * keys: never renumber existing ids when inserting or reordering levels.
  */
 class Levels
 {
@@ -58,7 +58,7 @@ class Levels
             new LevelDefinition(
                 id: 'c1-l2',
                 title: 'Name That Relation',
-                task: 'A user has one phone.',
+                task: 'Every user carries a single phone.',
                 mode: Mode::Guess,
                 model: User::class,
                 method: 'phone',
@@ -78,7 +78,7 @@ class Levels
             new LevelDefinition(
                 id: 'c1-l4',
                 title: 'The Other Side',
-                task: 'Same tables, opposite direction: the phone belongs to its user.',
+                task: 'Same tables, opposite direction: this time you start from the phone.',
                 mode: Mode::Guess,
                 model: Phone::class,
                 method: 'user',
@@ -111,18 +111,18 @@ class Levels
                 mode: Mode::Connect,
                 model: User::class,
                 method: 'posts',
-                hint: 'Exactly like hasOne — the "many" only changes what Eloquent returns.',
+                hint: 'Exactly like hasOne: the "many" only changes what Eloquent returns.',
             ),
             new LevelDefinition(
                 id: 'c2-l2',
                 title: 'Posts and Comments',
-                task: 'A post has many comments.',
+                task: 'Readers keep leaving comments under every post.',
                 mode: Mode::Guess,
                 model: Post::class,
                 method: 'comments',
                 perspective: 'From the Post model, which relation returns the comments?',
                 guessChoices: [RelationType::HasMany, RelationType::HasOne, RelationType::BelongsTo, RelationType::BelongsToMany],
-                hint: 'One post, many comments — and the foreign key sits on comments.',
+                hint: 'One post, many comments, and the foreign key sits on comments.',
             ),
             new LevelDefinition(
                 id: 'c2-l3',
@@ -136,7 +136,7 @@ class Levels
             new LevelDefinition(
                 id: 'c2-l4',
                 title: 'Rebel Schema',
-                task: 'A customer has many orders — but this schema ignores naming conventions.',
+                task: 'A customer has many orders, but this schema ignores naming conventions.',
                 mode: Mode::Connect,
                 model: Customer::class,
                 method: 'orders',
@@ -145,7 +145,7 @@ class Levels
             new LevelDefinition(
                 id: 'c2-l5',
                 title: 'Convention Breaker',
-                task: 'Complete the orders() method — Eloquent needs to know about the unusual foreign key.',
+                task: 'Complete the orders() method. Eloquent needs to know about the unusual foreign key.',
                 mode: Mode::Code,
                 model: Customer::class,
                 method: 'orders',
@@ -163,7 +163,7 @@ class Levels
             new LevelDefinition(
                 id: 'c3-l1',
                 title: 'Meet the Pivot',
-                task: 'Users belong to many roles. Two connections are needed — the pivot table links both sides.',
+                task: 'Users belong to many roles. Two connections are needed: the pivot table links both sides.',
                 mode: Mode::Connect,
                 model: User::class,
                 method: 'roles',
@@ -210,7 +210,7 @@ class Levels
             new LevelDefinition(
                 id: 'c4-l2',
                 title: 'Through in Code',
-                task: 'Complete the carOwner() method — mind the argument order.',
+                task: 'Complete the carOwner() method. Mind the argument order.',
                 mode: Mode::Code,
                 model: Mechanic::class,
                 method: 'carOwner',
@@ -246,7 +246,7 @@ class Levels
             new LevelDefinition(
                 id: 'c5-l1',
                 title: 'Shape Shifter',
-                task: 'A user has one image — but images can belong to any model. That is what imageable_type is for.',
+                task: 'A user has one image, but images can belong to any model. That is what imageable_type is for.',
                 mode: Mode::Connect,
                 model: User::class,
                 method: 'image',
@@ -255,7 +255,7 @@ class Levels
             new LevelDefinition(
                 id: 'c5-l2',
                 title: 'Reactions Everywhere',
-                task: 'A video has many reactions — and so does a post. The reactions table serves both.',
+                task: 'Videos collect reactions, and posts do too. One reactions table serves them both.',
                 mode: Mode::Guess,
                 model: Video::class,
                 method: 'reactions',
@@ -275,7 +275,7 @@ class Levels
             new LevelDefinition(
                 id: 'c5-l4',
                 title: 'Who Do I Belong To?',
-                task: 'A reaction belongs to whatever it reacts to — a post or a video.',
+                task: 'A reaction sticks to whatever it reacts to: a post or a video.',
                 mode: Mode::Guess,
                 model: Reaction::class,
                 method: 'reactable',
@@ -312,7 +312,7 @@ class Levels
                 mode: Mode::Code,
                 model: Post::class,
                 method: 'tags',
-                hint: 'Like belongsToMany, but polymorphic — so the morph name rides along.',
+                hint: 'Like belongsToMany, but polymorphic, so the morph name rides along.',
             ),
         ];
     }

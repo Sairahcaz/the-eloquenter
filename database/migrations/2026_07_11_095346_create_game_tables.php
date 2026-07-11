@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Game fixture tables. They are never filled with data — the game introspects
+ * Game fixture tables. They are never filled with data: the game introspects
  * their schema and the models' relation methods to generate level content.
  */
 return new class extends Migration

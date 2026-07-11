@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted } from 'vue';
 import { boardApiKey } from '@/game/board';
+import type { AnchorSide } from '@/game/geometry';
 import type { ColumnRef, TableColumn } from '@/game/types';
 
 const props = defineProps<{
@@ -10,7 +11,7 @@ const props = defineProps<{
 
 const board = inject(boardApiKey)!;
 
-const dotEl = ref<HTMLElement | null>(null);
+const dotEls = new Map<AnchorSide, HTMLElement>();
 
 const columnRef = computed<ColumnRef>(() => ({
     table: props.tableId,
@@ -24,7 +25,7 @@ const hasDot = computed(
         props.column.key === 'foreign',
 );
 
-const side = computed(() => board.dotSide(columnRef.value));
+const sides = computed(() => board.dotSides(columnRef.value));
 
 const status = computed(() => board.dotStatus(columnRef.value));
 
@@ -40,15 +41,23 @@ const badgeLabels: Record<string, string> = {
     morph: 'TYPE',
 };
 
+function setDotEl(side: AnchorSide, el: unknown): void {
+    if (el instanceof HTMLElement) {
+        dotEls.set(side, el);
+    } else {
+        dotEls.delete(side);
+    }
+}
+
 onMounted(() => {
-    if (dotEl.value) {
-        board.registerDot(columnRef.value, dotEl.value);
+    for (const [side, el] of dotEls) {
+        board.registerDot(columnRef.value, side, el);
     }
 });
 
 onBeforeUnmount(() => {
-    if (hasDot.value) {
-        board.unregisterDot(columnRef.value);
+    for (const side of dotEls.keys()) {
+        board.unregisterDot(columnRef.value, side);
     }
 });
 </script>
@@ -72,29 +81,33 @@ onBeforeUnmount(() => {
             >{{ column.type }}</span
         >
 
-        <button
-            v-if="hasDot"
-            ref="dotEl"
-            type="button"
-            data-dot
-            :data-table="tableId"
-            :data-column="column.name"
-            :aria-label="`Connect ${tableId}.${column.name}`"
-            class="absolute top-1/2 -translate-y-1/2 touch-none p-2"
-            :class="side === 'left' ? '-left-5' : '-right-5'"
-            @pointerdown="board.startDrag(columnRef, $event)"
-        >
-            <span
-                class="block size-3 rounded-full border-2 transition"
-                :class="{
-                    'border-slate-400 bg-white dark:border-slate-500 dark:bg-slate-950':
-                        status === 'idle' && !board.isInteractive(),
-                    'animate-dot-pulse cursor-grab border-accent bg-white dark:bg-slate-950':
-                        status === 'idle' && board.isInteractive(),
-                    'border-success bg-success': status === 'connected',
-                    'scale-125 border-accent bg-accent': status === 'dragging',
-                }"
-            />
-        </button>
+        <template v-if="hasDot">
+            <button
+                v-for="side in sides"
+                :key="side"
+                :ref="(el) => setDotEl(side, el)"
+                type="button"
+                data-dot
+                :data-table="tableId"
+                :data-column="column.name"
+                :aria-label="`Connect ${tableId}.${column.name}`"
+                class="absolute top-1/2 -translate-y-1/2 touch-none p-2"
+                :class="side === 'left' ? '-left-3.5' : '-right-3.5'"
+                @pointerdown="board.startDrag(columnRef, $event)"
+            >
+                <span
+                    class="block size-3 rounded-full border-2 transition"
+                    :class="{
+                        'border-slate-400 bg-white dark:border-slate-500 dark:bg-slate-950':
+                            status === 'idle' && !board.isInteractive(),
+                        'animate-dot-pulse cursor-grab border-accent bg-white dark:bg-slate-950':
+                            status === 'idle' && board.isInteractive(),
+                        'border-success bg-success': status === 'connected',
+                        'scale-125 border-accent bg-accent':
+                            status === 'dragging',
+                    }"
+                />
+            </button>
+        </template>
     </li>
 </template>

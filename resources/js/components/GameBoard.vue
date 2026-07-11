@@ -11,7 +11,7 @@ import type { Stars } from '@/composables/useGameProgress';
 import { boardApiKey } from '@/game/board';
 import type { BoardApi, DotStatus } from '@/game/board';
 import { connectionPath, dragPath } from '@/game/geometry';
-import type { AnchorSide, RenderedConnection } from '@/game/geometry';
+import type { Anchor, AnchorSide, RenderedConnection } from '@/game/geometry';
 import { columnRefKey, levelConnections, sameConnection } from '@/game/types';
 import type { ColumnRef, ConnectionDef, Level } from '@/game/types';
 
@@ -45,7 +45,7 @@ function touchesRef(connection: ConnectionDef, ref: ColumnRef): boolean {
     );
 }
 
-function dotSide(ref: ColumnRef): AnchorSide {
+function answerSide(ref: ColumnRef): AnchorSide {
     const ownCol = tableCols.value[ref.table] ?? 1;
     const connection = levelConnections(props.level).find((candidate) =>
         touchesRef(candidate, ref),
@@ -66,7 +66,28 @@ function dotSide(ref: ColumnRef): AnchorSide {
     return ownCol === 3 ? 'left' : 'right';
 }
 
-const registry = useAnchorRegistry(boardEl, dotSide);
+// In connect mode the sides must not depend on the expected connections,
+// otherwise the dot placement leaks which column belongs to which neighbour.
+// Middle-column tables therefore expose every dot on both sides.
+function dotSides(ref: ColumnRef): AnchorSide[] {
+    if (props.level.mode !== 'connect') {
+        return [answerSide(ref)];
+    }
+
+    const col = tableCols.value[ref.table] ?? 1;
+
+    if (col === 1) {
+        return ['right'];
+    }
+
+    if (col === 3) {
+        return ['left'];
+    }
+
+    return ['left', 'right'];
+}
+
+const registry = useAnchorRegistry(boardEl);
 
 const drag = useConnectionDrag({
     isEnabled: () => interactive.value,
@@ -115,7 +136,7 @@ function solve(): void {
 
     solved.value = true;
 
-    const base = mistakes.value === 0 ? 3 : mistakes.value <= 2 ? 2 : 1;
+    const base = Math.max(1, 3 - mistakes.value);
     const stars = Math.min(base, hintVisible.value ? 2 : 3) as Stars;
 
     setTimeout(() => emit('complete', stars), 700);
@@ -128,7 +149,7 @@ const boardApi: BoardApi = {
     allColumnsConnectable: () => props.level.mode === 'connect',
     registerDot: registry.registerDot,
     unregisterDot: registry.unregisterDot,
-    dotSide,
+    dotSides,
     dotStatus(ref: ColumnRef): DotStatus {
         if (
             drag.dragFrom.value &&
@@ -181,17 +202,16 @@ const renderedConnections = computed<RenderedConnection[]>(() => {
     }
 
     return items.flatMap(({ connection, state, delayMs }) => {
-        const from = registry.anchorFor(connection.from);
-        const to = registry.anchorFor(connection.to);
+        const pair = anchorPair(connection.from, connection.to);
 
-        if (!from || !to) {
+        if (!pair) {
             return [];
         }
 
         return [
             {
                 id: connectionId(connection),
-                path: connectionPath(from, to),
+                path: connectionPath(pair.from, pair.to),
                 state,
                 delayMs,
             },
@@ -199,12 +219,33 @@ const renderedConnections = computed<RenderedConnection[]>(() => {
     });
 });
 
+// With double-sided dots a connection has several anchor candidates; the
+// pair with the shortest horizontal gap faces the other table.
+function anchorPair(
+    fromRef: ColumnRef,
+    toRef: ColumnRef,
+): { from: Anchor; to: Anchor } | null {
+    let best: { from: Anchor; to: Anchor; distance: number } | null = null;
+
+    for (const from of registry.anchorsFor(fromRef)) {
+        for (const to of registry.anchorsFor(toRef)) {
+            const distance = Math.abs(from.x - to.x);
+
+            if (!best || distance < best.distance) {
+                best = { from, to, distance };
+            }
+        }
+    }
+
+    return best;
+}
+
 const livePath = computed(() => {
     if (!drag.dragFrom.value) {
         return null;
     }
 
-    const anchor = registry.anchorFor(drag.dragFrom.value);
+    const anchor = registry.anchorFor(drag.dragFrom.value, drag.cursor.x);
 
     return anchor ? dragPath(anchor, drag.cursor) : null;
 });
