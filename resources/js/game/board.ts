@@ -10,6 +10,7 @@ export type DotStatus = 'idle' | 'connected' | 'dragging';
  */
 export interface BoardApi {
     isInteractive(): boolean;
+    allColumnsConnectable(): boolean;
     registerDot(ref: ColumnRef, el: HTMLElement): void;
     unregisterDot(ref: ColumnRef): void;
     dotSide(ref: ColumnRef): AnchorSide;

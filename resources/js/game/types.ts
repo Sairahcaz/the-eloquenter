@@ -85,6 +85,11 @@ export interface Chapter {
     levels: Level[];
 }
 
+export interface HighscoreEntry {
+    name: string;
+    stars: number;
+}
+
 export function levelConnections(level: Level): ConnectionDef[] {
     return level.mode === 'connect'
         ? level.expectedConnections

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ShareOnXButton from '@/components/ShareOnXButton.vue';
 import StarRating from '@/components/StarRating.vue';
 import { relationDescriptions } from '@/game/relations';
 import type { Level } from '@/game/types';
@@ -8,6 +9,7 @@ const props = defineProps<{
     level: Level;
     stars: number;
     hasNext: boolean;
+    shareText: string | null;
 }>();
 
 const emit = defineEmits<{ next: []; select: [] }>();
@@ -70,6 +72,18 @@ const praise = computed(() => {
                 >
                     {{ statement }}
                 </code>
+            </div>
+
+            <div
+                v-if="shareText"
+                class="mt-5 flex flex-col items-center gap-2 rounded-xl border border-star/30 bg-star/10 p-4"
+            >
+                <p
+                    class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+                >
+                    Milestone unlocked! 🏆
+                </p>
+                <ShareOnXButton :text="shareText" />
             </div>
 
             <div class="mt-6 flex justify-center gap-3">

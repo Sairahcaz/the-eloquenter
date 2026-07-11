@@ -123,6 +123,9 @@ function solve(): void {
 
 const boardApi: BoardApi = {
     isInteractive: () => interactive.value,
+    // In connect mode every column gets a dot; only key columns would give
+    // the answer away.
+    allColumnsConnectable: () => props.level.mode === 'connect',
     registerDot: registry.registerDot,
     unregisterDot: registry.unregisterDot,
     dotSide,

@@ -18,7 +18,10 @@ const columnRef = computed<ColumnRef>(() => ({
 }));
 
 const hasDot = computed(
-    () => props.column.key === 'primary' || props.column.key === 'foreign',
+    () =>
+        board.allColumnsConnectable() ||
+        props.column.key === 'primary' ||
+        props.column.key === 'foreign',
 );
 
 const side = computed(() => board.dotSide(columnRef.value));

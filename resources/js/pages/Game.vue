@@ -1,31 +1,30 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { computed, onMounted, ref } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import CompletionModal from '@/components/CompletionModal.vue';
 import GameBoard from '@/components/GameBoard.vue';
 import LevelSelect from '@/components/LevelSelect.vue';
 import StartScreen from '@/components/StartScreen.vue';
 import { useGameProgress } from '@/composables/useGameProgress';
 import type { Stars } from '@/composables/useGameProgress';
-import type { Chapter, Level } from '@/game/types';
+import type { Chapter, HighscoreEntry, Level } from '@/game/types';
+import { store as storeHighscore } from '@/routes/highscores';
 
-const props = defineProps<{ chapters: Chapter[] }>();
+const props = defineProps<{
+    chapters: Chapter[];
+    highscores: HighscoreEntry[];
+}>();
 
 const progress = useGameProgress();
 
 type Screen = 'start' | 'select' | 'level';
 
-// Starts on 'start' even for returning players: the server render has no
-// localStorage, so anything else would cause a hydration mismatch.
+// Everyone lands on the start screen; returning players get a
+// "Continue as ..." button there instead of being skipped ahead.
 const screen = ref<Screen>('start');
 const currentLevel = ref<Level | null>(null);
 const completionStars = ref<Stars | null>(null);
-
-onMounted(() => {
-    if (progress.playerName.value) {
-        screen.value = 'select';
-    }
-});
+const shareText = ref<string | null>(null);
 
 const flatLevels = computed(() =>
     props.chapters.flatMap((chapter) => chapter.levels),
@@ -58,14 +57,48 @@ function handleStart(name: string): void {
 function handlePlay(level: Level): void {
     currentLevel.value = level;
     completionStars.value = null;
+    shareText.value = null;
     screen.value = 'level';
 }
 
-function handleComplete(stars: Stars): void {
-    if (currentLevel.value) {
-        progress.recordCompletion(currentLevel.value.id, stars);
-        completionStars.value = stars;
+// Sharing after every level would be noise; only chapter completions and
+// finishing the game are brag-worthy milestones.
+function milestoneShareText(completedLevel: Level): string | null {
+    const stars = progress.totalStars.value;
+    const max = flatLevels.value.length * 3;
+
+    if (flatLevels.value.every((level) => progress.isCompleted(level.id))) {
+        return `I mastered every Eloquent relationship in The Eloquenter: ${stars}/${max} stars 🔥 Learn Laravel Eloquent, gamified!`;
     }
+
+    const chapter = props.chapters.find((candidate) =>
+        candidate.levels.some((level) => level.id === completedLevel.id),
+    );
+
+    if (
+        chapter &&
+        chapter.levels.every((level) => progress.isCompleted(level.id))
+    ) {
+        return `Chapter "${chapter.title}" completed in The Eloquenter with ${stars}/${max} stars ⭐ Learning Laravel Eloquent relationships, gamified!`;
+    }
+
+    return null;
+}
+
+function handleComplete(stars: Stars): void {
+    if (!currentLevel.value) {
+        return;
+    }
+
+    progress.recordCompletion(currentLevel.value.id, stars);
+    completionStars.value = stars;
+    shareText.value = milestoneShareText(currentLevel.value);
+
+    router.post(
+        storeHighscore.url(),
+        { name: progress.playerName.value, stars: progress.totalStars.value },
+        { preserveState: true, preserveScroll: true },
+    );
 }
 
 function handleNext(): void {
@@ -80,6 +113,7 @@ function backToSelect(): void {
     screen.value = 'select';
     currentLevel.value = null;
     completionStars.value = null;
+    shareText.value = null;
 }
 </script>
 
@@ -90,10 +124,15 @@ function backToSelect(): void {
         class="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100"
     >
         <div :key="screenKey" class="screen-enter">
-            <StartScreen v-if="screen === 'start'" @start="handleStart" />
+            <StartScreen
+                v-if="screen === 'start'"
+                :highscores="highscores"
+                @start="handleStart"
+            />
             <LevelSelect
                 v-else-if="screen === 'select'"
                 :chapters="chapters"
+                :highscores="highscores"
                 @play="handlePlay"
             />
             <GameBoard
@@ -109,6 +148,7 @@ function backToSelect(): void {
             :level="currentLevel"
             :stars="completionStars"
             :has-next="nextLevel !== null"
+            :share-text="shareText"
             @next="handleNext"
             @select="backToSelect"
         />
