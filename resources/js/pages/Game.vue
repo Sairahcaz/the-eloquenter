@@ -5,14 +5,27 @@ import CompletionModal from '@/components/CompletionModal.vue';
 import GameBoard from '@/components/GameBoard.vue';
 import LevelSelect from '@/components/LevelSelect.vue';
 import StartScreen from '@/components/StartScreen.vue';
-import { useGameProgress } from '@/composables/useGameProgress';
-import type { Stars } from '@/composables/useGameProgress';
-import type { Chapter, HighscoreEntry, Level } from '@/game/types';
-import { store as storeHighscore } from '@/routes/highscores';
+import {
+    rememberIdentity,
+    storedIdentity,
+    useGameProgress,
+} from '@/composables/useGameProgress';
+import type {
+    Chapter,
+    HighscoreEntry,
+    Level,
+    LevelResult,
+    Paginated,
+    PlayerIdentity,
+} from '@/game/types';
+import { store as storePlayer } from '@/routes/players';
 
 const props = defineProps<{
     chapters: Chapter[];
-    highscores: HighscoreEntry[];
+    player: PlayerIdentity | null;
+    completions: Record<string, number>;
+    topHighscores: HighscoreEntry[];
+    highscores: Paginated<HighscoreEntry>;
 }>();
 
 const progress = useGameProgress();
@@ -23,8 +36,9 @@ type Screen = 'start' | 'select' | 'level';
 // "Continue as ..." button there instead of being skipped ahead.
 const screen = ref<Screen>('start');
 const currentLevel = ref<Level | null>(null);
-const completionStars = ref<Stars | null>(null);
+const completionResult = ref<LevelResult | null>(null);
 const shareText = ref<string | null>(null);
+const finale = ref(false);
 
 const flatLevels = computed(() =>
     props.chapters.flatMap((chapter) => chapter.levels),
@@ -37,27 +51,63 @@ const screenKey = computed(() =>
     screen.value === 'level' ? `level-${currentLevel.value?.id}` : screen.value,
 );
 
+// Only levels within the same chapter chain directly; after a chapter's
+// last level the player returns to the map before the next section starts.
 const nextLevel = computed(() => {
     if (!currentLevel.value) {
         return null;
     }
 
-    const index = flatLevels.value.findIndex(
+    const chapter = props.chapters.find((candidate) =>
+        candidate.levels.some((level) => level.id === currentLevel.value!.id),
+    );
+
+    if (!chapter) {
+        return null;
+    }
+
+    const index = chapter.levels.findIndex(
         (level) => level.id === currentLevel.value!.id,
     );
 
-    return flatLevels.value[index + 1] ?? null;
+    return chapter.levels[index + 1] ?? null;
 });
 
 function handleStart(name: string): void {
-    progress.setPlayerName(name);
-    screen.value = 'select';
+    // The session already knows this player; no need to join again.
+    if (props.player && props.player.name === name) {
+        rememberIdentity(props.player);
+        screen.value = 'select';
+
+        return;
+    }
+
+    const stored = storedIdentity();
+
+    router.post(
+        storePlayer.url(),
+        // The token resumes an existing player; a different name means the
+        // visitor wants a fresh start.
+        { name, token: stored && stored.name === name ? stored.token : null },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                if (props.player) {
+                    rememberIdentity(props.player);
+                }
+
+                screen.value = 'select';
+            },
+        },
+    );
 }
 
 function handlePlay(level: Level): void {
     currentLevel.value = level;
-    completionStars.value = null;
+    completionResult.value = null;
     shareText.value = null;
+    finale.value = false;
     screen.value = 'level';
 }
 
@@ -85,20 +135,27 @@ function milestoneShareText(completedLevel: Level): string | null {
     return null;
 }
 
-function handleComplete(stars: Stars): void {
+function handleComplete(result: LevelResult): void {
     if (!currentLevel.value) {
         return;
     }
 
-    progress.recordCompletion(currentLevel.value.id, stars);
-    completionStars.value = stars;
-    shareText.value = milestoneShareText(currentLevel.value);
+    const completedLevel = currentLevel.value;
+    completionResult.value = result;
 
-    router.post(
-        storeHighscore.url(),
-        { name: progress.playerName.value, stars: progress.totalStars.value },
-        { preserveState: true, preserveScroll: true },
-    );
+    // The server already recorded the completion; refresh progress and
+    // leaderboard props before judging milestone share-worthiness.
+    router.reload({
+        only: ['completions', 'highscores', 'topHighscores'],
+        onSuccess: () => {
+            shareText.value = milestoneShareText(completedLevel);
+            finale.value =
+                completedLevel.id === flatLevels.value.at(-1)?.id &&
+                flatLevels.value.every((level) =>
+                    progress.isCompleted(level.id),
+                );
+        },
+    });
 }
 
 function handleNext(): void {
@@ -112,8 +169,9 @@ function handleNext(): void {
 function backToSelect(): void {
     screen.value = 'select';
     currentLevel.value = null;
-    completionStars.value = null;
+    completionResult.value = null;
     shareText.value = null;
+    finale.value = false;
 }
 </script>
 
@@ -142,7 +200,7 @@ function backToSelect(): void {
         <div :key="screenKey" class="screen-enter relative">
             <StartScreen
                 v-if="screen === 'start'"
-                :highscores="highscores"
+                :highscores="topHighscores"
                 @start="handleStart"
             />
             <LevelSelect
@@ -160,11 +218,14 @@ function backToSelect(): void {
         </div>
 
         <CompletionModal
-            v-if="completionStars && currentLevel"
+            v-if="completionResult && currentLevel"
             :level="currentLevel"
-            :stars="completionStars"
+            :stars="completionResult.stars"
+            :relation="completionResult.relation"
+            :statement="completionResult.statement"
             :has-next="nextLevel !== null"
             :share-text="shareText"
+            :finale="finale"
             @next="handleNext"
             @select="backToSelect"
         />

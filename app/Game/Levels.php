@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\Reaction;
 use App\Models\User;
 use App\Models\Video;
+use Illuminate\Support\Arr;
 
 /**
  * The curriculum. Level ids are persisted in players' browsers as progress
@@ -38,6 +39,22 @@ class Levels
     public static function all(): array
     {
         return array_merge(...array_map(fn (Chapter $chapter) => $chapter->levels, self::chapters()));
+    }
+
+    public static function find(string $id): ?LevelDefinition
+    {
+        return Arr::first(self::all(), fn (LevelDefinition $level) => $level->id === $id);
+    }
+
+    /**
+     * The level that must be completed before the given one unlocks.
+     */
+    public static function previous(string $id): ?LevelDefinition
+    {
+        $all = self::all();
+        $index = array_find_key($all, fn (LevelDefinition $level) => $level->id === $id);
+
+        return $index !== null && $index > 0 ? $all[$index - 1] : null;
     }
 
     /**

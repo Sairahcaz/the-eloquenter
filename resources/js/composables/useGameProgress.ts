@@ -1,91 +1,74 @@
-import { computed, reactive, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import type { PlayerIdentity } from '@/game/types';
 
-const STORAGE_KEY = 'eloquenter.v1';
+const STORAGE_KEY = 'eloquenter.v2';
 
 export type Stars = 1 | 2 | 3;
 
-interface LevelResult {
-    stars: Stars;
-    completedAt: string;
+interface ProgressPageProps {
+    player: PlayerIdentity | null;
+    completions: Record<string, number>;
+    [key: string]: unknown;
 }
 
-interface SaveData {
-    version: 1;
-    playerName: string;
-    levels: Record<string, LevelResult>;
+/**
+ * Progress lives on the server and arrives as Inertia props; localStorage
+ * only keeps the player token so returning players can resume their session.
+ */
+export function useGameProgress() {
+    const page = usePage<ProgressPageProps>();
+
+    const completions = computed(() => page.props.completions ?? {});
+
+    return {
+        playerName: computed(() => page.props.player?.name ?? ''),
+        totalStars: computed(() =>
+            Object.values(completions.value).reduce(
+                (sum, stars) => sum + stars,
+                0,
+            ),
+        ),
+        starsFor(levelId: string): number {
+            return completions.value[levelId] ?? 0;
+        },
+        isCompleted(levelId: string): boolean {
+            return levelId in completions.value;
+        },
+    };
 }
 
-function defaultSave(): SaveData {
-    return { version: 1, playerName: '', levels: {} };
-}
-
-function load(): SaveData {
+export function storedIdentity(): PlayerIdentity | null {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
 
         if (!raw) {
-            return defaultSave();
+            return null;
         }
 
-        const parsed = JSON.parse(raw) as SaveData;
+        const parsed = JSON.parse(raw) as PlayerIdentity;
 
-        if (
-            parsed.version !== 1 ||
-            typeof parsed.playerName !== 'string' ||
-            typeof parsed.levels !== 'object'
-        ) {
-            return defaultSave();
-        }
-
-        return parsed;
+        return typeof parsed.name === 'string' &&
+            typeof parsed.token === 'string'
+            ? parsed
+            : null;
     } catch {
-        return defaultSave();
+        return null;
     }
 }
 
-const state = reactive<SaveData>(load());
+export function rememberIdentity(identity: PlayerIdentity): void {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
+    } catch {
+        // Storage may be unavailable (private mode); resuming just won't work.
+    }
+}
 
-watch(
-    state,
-    () => {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch {
-            // Storage may be unavailable (private mode); the game still works for the session.
-        }
-    },
-    { deep: true },
-);
-
-export function useGameProgress() {
-    return {
-        playerName: computed(() => state.playerName),
-        totalStars: computed(() =>
-            Object.values(state.levels).reduce(
-                (sum, level) => sum + level.stars,
-                0,
-            ),
-        ),
-        setPlayerName(name: string): void {
-            state.playerName = name.trim();
-        },
-        starsFor(levelId: string): number {
-            return state.levels[levelId]?.stars ?? 0;
-        },
-        isCompleted(levelId: string): boolean {
-            return levelId in state.levels;
-        },
-        recordCompletion(levelId: string, stars: Stars): void {
-            const previous = state.levels[levelId]?.stars ?? 0;
-
-            state.levels[levelId] = {
-                stars: Math.max(previous, stars) as Stars,
-                completedAt: new Date().toISOString(),
-            };
-        },
-        resetProgress(): void {
-            state.playerName = '';
-            state.levels = {};
-        },
-    };
+export function forgetIdentity(): void {
+    try {
+        localStorage.removeItem(STORAGE_KEY);
+    } catch {
+        // Nothing to forget if storage is unavailable.
+    }
 }

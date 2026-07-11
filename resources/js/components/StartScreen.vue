@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import Leaderboard from '@/components/Leaderboard.vue';
-import { useGameProgress } from '@/composables/useGameProgress';
+import {
+    forgetIdentity,
+    storedIdentity,
+    useGameProgress,
+} from '@/composables/useGameProgress';
 import type { HighscoreEntry } from '@/game/types';
 
 defineProps<{ highscores: HighscoreEntry[] }>();
@@ -17,11 +21,12 @@ const name = ref('');
 const knownPlayer = ref('');
 
 onMounted(() => {
-    knownPlayer.value = progress.playerName.value;
+    knownPlayer.value =
+        progress.playerName.value || (storedIdentity()?.name ?? '');
 });
 
 function switchPlayer(): void {
-    progress.resetProgress();
+    forgetIdentity();
     knownPlayer.value = '';
 }
 

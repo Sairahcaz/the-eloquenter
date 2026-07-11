@@ -3,6 +3,13 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/* The game is dark-only: app.blade.php hard-sets the class on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+    color-scheme: dark;
+}
+
 @theme inline {
     --font-sans:
         Instrument Sans, ui-sans-serif, system-ui, sans-serif,

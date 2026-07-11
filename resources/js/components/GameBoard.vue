@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, provide, reactive, ref } from 'vue';
+import { useHttp } from '@inertiajs/vue3';
+import { computed, onMounted, provide, reactive, ref } from 'vue';
 import AnswerChoices from '@/components/AnswerChoices.vue';
 import CodeCompletion from '@/components/CodeCompletion.vue';
 import ConnectionLayer from '@/components/ConnectionLayer.vue';
@@ -7,26 +8,50 @@ import TableCard from '@/components/TableCard.vue';
 import TaskBanner from '@/components/TaskBanner.vue';
 import { useAnchorRegistry } from '@/composables/useAnchorRegistry';
 import { useConnectionDrag } from '@/composables/useConnectionDrag';
-import type { Stars } from '@/composables/useGameProgress';
 import { boardApiKey } from '@/game/board';
 import type { BoardApi, DotStatus } from '@/game/board';
 import { connectionPath, dragPath } from '@/game/geometry';
 import type { Anchor, AnchorSide, RenderedConnection } from '@/game/geometry';
 import { columnRefKey, levelConnections, sameConnection } from '@/game/types';
-import type { ColumnRef, ConnectionDef, Level } from '@/game/types';
+import type {
+    CodeJudgement,
+    ColumnRef,
+    ConnectionDef,
+    ConnectionJudgement,
+    GuessJudgement,
+    Level,
+    LevelResult,
+} from '@/game/types';
+import {
+    attempt as attemptRoute,
+    connections as connectionsRoute,
+    hint as hintRoute,
+} from '@/routes/levels';
 
 const props = defineProps<{ level: Level }>();
 
-const emit = defineEmits<{ complete: [stars: Stars]; back: [] }>();
+const emit = defineEmits<{ complete: [result: LevelResult]; back: [] }>();
 
 const boardEl = ref<HTMLElement | null>(null);
 
 const made = ref<ConnectionDef[]>([]);
 const rejected = ref<ConnectionDef | null>(null);
-const mistakes = ref(0);
-const hintVisible = ref(false);
+const hintText = ref<string | null>(null);
 const solved = ref(false);
 const shakeSignals = reactive<Record<string, number>>({});
+
+const attemptHttp = useHttp({});
+const connectionHttp = useHttp<
+    { from: ColumnRef | null; to: ColumnRef | null },
+    ConnectionJudgement
+>({ from: null, to: null });
+const hintHttp = useHttp<Record<string, never>, { hint: string }>({});
+
+// Every level open resets the server-side attempt, so mistakes from an
+// earlier run don't bleed into this one.
+onMounted(() => {
+    attemptHttp.post(attemptRoute.url(props.level.id));
+});
 
 const interactive = computed(
     () => props.level.mode === 'connect' && !solved.value,
@@ -97,7 +122,11 @@ const drag = useConnectionDrag({
 });
 
 function onConnect(from: ColumnRef, to: ColumnRef): void {
-    if (props.level.mode !== 'connect' || solved.value) {
+    if (
+        props.level.mode !== 'connect' ||
+        solved.value ||
+        connectionHttp.processing
+    ) {
         return;
     }
 
@@ -109,37 +138,71 @@ function onConnect(from: ColumnRef, to: ColumnRef): void {
         return;
     }
 
-    const expected = props.level.expectedConnections.find((connection) =>
-        sameConnection(connection, candidate),
-    );
+    connectionHttp.from = from;
+    connectionHttp.to = to;
+    connectionHttp.post(connectionsRoute.url(props.level.id), {
+        onSuccess: (judgement) => {
+            if (!judgement.correct) {
+                rejected.value = candidate;
+                shakeSignals[to.table] = (shakeSignals[to.table] ?? 0) + 1;
+                setTimeout(() => (rejected.value = null), 700);
 
-    if (expected) {
-        made.value.push(expected);
+                return;
+            }
 
-        if (made.value.length === props.level.expectedConnections.length) {
-            solve();
-        }
+            made.value.push(candidate);
 
-        return;
-    }
-
-    mistakes.value++;
-    rejected.value = candidate;
-    shakeSignals[to.table] = (shakeSignals[to.table] ?? 0) + 1;
-    setTimeout(() => (rejected.value = null), 700);
+            if (judgement.solved && judgement.stars && judgement.relation) {
+                solve({
+                    stars: judgement.stars,
+                    relation: judgement.relation,
+                    statement: null,
+                });
+            }
+        },
+    });
 }
 
-function solve(): void {
+function solve(result: LevelResult): void {
     if (solved.value) {
         return;
     }
 
     solved.value = true;
 
-    const base = Math.max(1, 3 - mistakes.value);
-    const stars = Math.min(base, hintVisible.value ? 2 : 3) as Stars;
+    setTimeout(() => emit('complete', result), 700);
+}
 
-    setTimeout(() => emit('complete', stars), 700);
+function handleGuessCorrect(judgement: GuessJudgement): void {
+    if (judgement.stars && judgement.relation) {
+        solve({
+            stars: judgement.stars,
+            relation: judgement.relation,
+            statement: null,
+        });
+    }
+}
+
+function handleCodeCorrect(judgement: CodeJudgement): void {
+    if (judgement.stars && judgement.relation) {
+        solve({
+            stars: judgement.stars,
+            relation: judgement.relation,
+            statement: judgement.statement,
+        });
+    }
+}
+
+function revealHint(): void {
+    if (hintText.value || hintHttp.processing) {
+        return;
+    }
+
+    hintHttp.post(hintRoute.url(props.level.id), {
+        onSuccess: (response) => {
+            hintText.value = response.hint;
+        },
+    });
 }
 
 const boardApi: BoardApi = {
@@ -196,7 +259,7 @@ const renderedConnections = computed<RenderedConnection[]>(() => {
             });
         }
     } else {
-        props.level.shownConnections.forEach((connection, index) =>
+        levelConnections(props.level).forEach((connection, index) =>
             items.push({ connection, state: 'locked', delayMs: index * 220 }),
         );
     }
@@ -261,9 +324,9 @@ const rowCount = computed(() =>
     >
         <TaskBanner
             :level="level"
-            :hint-visible="hintVisible"
+            :hint-text="hintText"
             @back="emit('back')"
-            @show-hint="hintVisible = true"
+            @show-hint="revealHint"
         />
 
         <div
@@ -300,24 +363,22 @@ const rowCount = computed(() =>
                 Drag from a glowing dot to the matching column.
                 <span class="ml-2 font-mono text-xs"
                     >{{ made.length }}/{{
-                        level.expectedConnections.length
+                        level.expectedCount
                     }}
                     connections</span
                 >
             </p>
             <AnswerChoices
                 v-else-if="level.mode === 'guess'"
+                :level-id="level.id"
                 :perspective="level.perspective"
                 :choices="level.choices"
-                :answer="level.answer"
-                @correct="solve"
-                @mistake="mistakes++"
+                @correct="handleGuessCorrect"
             />
             <CodeCompletion
                 v-else
                 :level="level"
-                @correct="solve"
-                @mistake="mistakes++"
+                @correct="handleCodeCorrect"
             />
         </div>
     </div>

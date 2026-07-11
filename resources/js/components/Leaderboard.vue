@@ -5,8 +5,9 @@ withDefaults(
     defineProps<{
         highscores: HighscoreEntry[];
         playerName?: string;
+        startRank?: number;
     }>(),
-    { playerName: '' },
+    { playerName: '', startRank: 1 },
 );
 </script>
 
@@ -49,7 +50,7 @@ withDefaults(
                 <span class="flex items-center gap-3">
                     <span
                         class="w-5 text-right font-mono text-xs text-slate-400"
-                        >{{ index + 1 }}</span
+                        >{{ startRank + index }}</span
                     >
                     {{ entry.name }}
                 </span>

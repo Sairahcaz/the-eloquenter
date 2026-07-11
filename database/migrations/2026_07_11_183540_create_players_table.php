@@ -8,16 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('highscores', function (Blueprint $table) {
+        Schema::create('players', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 30)->unique();
-            $table->unsignedSmallInteger('stars')->index();
+            $table->string('name', 30);
+            $table->uuid('token')->unique();
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('highscores');
+        Schema::dropIfExists('players');
     }
 };

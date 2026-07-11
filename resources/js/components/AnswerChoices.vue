@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { useHttp } from '@inertiajs/vue3';
 import { reactive, ref } from 'vue';
-import type { RelationType } from '@/game/types';
+import type { GuessJudgement, RelationType } from '@/game/types';
+import { guess as guessRoute } from '@/routes/levels';
 
 const props = defineProps<{
+    levelId: string;
     perspective: string;
     choices: RelationType[];
-    answer: RelationType;
 }>();
 
-const emit = defineEmits<{ correct: []; mistake: [] }>();
+const emit = defineEmits<{ correct: [judgement: GuessJudgement] }>();
 
 function shuffle<T>(items: T[]): T[] {
     const result = [...items];
@@ -23,22 +25,30 @@ function shuffle<T>(items: T[]): T[] {
 
 const shuffledChoices = ref(shuffle(props.choices));
 const wrongPicks = reactive(new Set<RelationType>());
-const solved = ref(false);
+const solvedChoice = ref<RelationType | null>(null);
+
+const http = useHttp<{ choice: RelationType | null }, GuessJudgement>({
+    choice: null,
+});
 
 function pick(choice: RelationType): void {
-    if (solved.value || wrongPicks.has(choice)) {
+    if (solvedChoice.value || wrongPicks.has(choice) || http.processing) {
         return;
     }
 
-    if (choice === props.answer) {
-        solved.value = true;
-        emit('correct');
+    http.choice = choice;
+    http.post(guessRoute.url(props.levelId), {
+        onSuccess: (judgement) => {
+            if (judgement.correct) {
+                solvedChoice.value = choice;
+                emit('correct', judgement);
 
-        return;
-    }
+                return;
+            }
 
-    wrongPicks.add(choice);
-    emit('mistake');
+            wrongPicks.add(choice);
+        },
+    });
 }
 </script>
 
@@ -52,16 +62,15 @@ function pick(choice: RelationType): void {
                 v-for="choice in shuffledChoices"
                 :key="choice"
                 type="button"
-                :disabled="solved || wrongPicks.has(choice)"
+                :disabled="solvedChoice !== null || wrongPicks.has(choice)"
                 class="rounded-xl border px-4 py-3 font-mono text-sm font-semibold transition active:scale-[0.98]"
                 :class="{
                     'animate-shake border-danger bg-danger/10 text-danger':
                         wrongPicks.has(choice),
                     'border-success bg-success/10 text-success':
-                        solved && choice === answer,
+                        solvedChoice === choice,
                     'border-slate-200 bg-white text-slate-800 hover:border-accent hover:text-accent dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200':
-                        !wrongPicks.has(choice) &&
-                        !(solved && choice === answer),
+                        !wrongPicks.has(choice) && solvedChoice !== choice,
                 }"
                 @click="pick(choice)"
             >

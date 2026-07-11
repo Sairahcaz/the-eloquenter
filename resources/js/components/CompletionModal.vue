@@ -3,26 +3,19 @@ import { computed } from 'vue';
 import ShareOnXButton from '@/components/ShareOnXButton.vue';
 import StarRating from '@/components/StarRating.vue';
 import { relationDescriptions } from '@/game/relations';
-import type { Level } from '@/game/types';
+import type { Level, RelationType } from '@/game/types';
 
 const props = defineProps<{
     level: Level;
     stars: number;
+    relation: RelationType;
+    statement: string | null;
     hasNext: boolean;
     shareText: string | null;
+    finale: boolean;
 }>();
 
 const emit = defineEmits<{ next: []; select: [] }>();
-
-const statement = computed(() => {
-    if (props.level.mode !== 'code') {
-        return null;
-    }
-
-    return props.level.codeParts
-        .map((part) => (typeof part === 'string' ? part : part.answer))
-        .join('');
-});
 
 const praise = computed(() => {
     if (props.stars === 3) {
@@ -42,29 +35,54 @@ const praise = computed(() => {
         <div
             class="w-full max-w-md animate-pop-in rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-2xl dark:border-slate-700 dark:bg-slate-900"
         >
-            <p class="font-mono text-xs tracking-widest text-accent uppercase">
-                Level complete
-            </p>
-            <h2 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                {{ level.title }}
-            </h2>
+            <template v-if="finale">
+                <p
+                    class="font-mono text-xs tracking-widest text-accent uppercase"
+                >
+                    Game complete
+                </p>
+                <h2
+                    class="mt-3 animate-pop-in font-display text-5xl tracking-wide text-balance"
+                >
+                    <span
+                        class="bg-linear-to-r from-accent via-star to-accent bg-clip-text text-transparent drop-shadow-[0_0_18px_var(--color-accent)]"
+                        >You are The Eloquenter.</span
+                    >
+                </h2>
+            </template>
+            <template v-else>
+                <p
+                    class="font-mono text-xs tracking-widest text-accent uppercase"
+                >
+                    Level complete
+                </p>
+                <h2
+                    class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+                >
+                    {{ level.title }}
+                </h2>
+            </template>
 
             <div class="my-6">
                 <StarRating :stars="stars" animated size="lg" />
             </div>
 
             <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ praise }}
+                {{
+                    finale
+                        ? 'Every relation mastered. Somewhere out there, raw SQL just got a little quieter.'
+                        : praise
+                }}
             </p>
 
             <div
                 class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left dark:border-slate-700 dark:bg-slate-800/60"
             >
                 <p class="font-mono text-xs font-semibold text-accent">
-                    {{ level.relation }}
+                    {{ relation }}
                 </p>
                 <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    {{ relationDescriptions[level.relation] }}
+                    {{ relationDescriptions[relation] }}
                 </p>
                 <code
                     v-if="statement"

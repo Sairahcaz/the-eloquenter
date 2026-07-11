@@ -2,13 +2,14 @@
 
 namespace Database\Factories;
 
-use App\Models\Highscore;
+use App\Models\Player;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
- * @extends Factory<Highscore>
+ * @extends Factory<Player>
  */
-class HighscoreFactory extends Factory
+class PlayerFactory extends Factory
 {
     /**
      * @return array<string, mixed>
@@ -17,7 +18,7 @@ class HighscoreFactory extends Factory
     {
         return [
             'name' => fake()->unique()->firstName(),
-            'stars' => fake()->numberBetween(1, 69),
+            'token' => Str::uuid()->toString(),
         ];
     }
 }

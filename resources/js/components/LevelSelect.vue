@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import Leaderboard from '@/components/Leaderboard.vue';
 import ShareOnXButton from '@/components/ShareOnXButton.vue';
 import StarRating from '@/components/StarRating.vue';
 import { useGameProgress } from '@/composables/useGameProgress';
-import type { Chapter, HighscoreEntry, Level } from '@/game/types';
+import type { Chapter, HighscoreEntry, Level, Paginated } from '@/game/types';
+import { home } from '@/routes';
 
 const props = defineProps<{
     chapters: Chapter[];
-    highscores: HighscoreEntry[];
+    highscores: Paginated<HighscoreEntry>;
 }>();
 
 const emit = defineEmits<{ play: [level: Level] }>();
@@ -53,6 +55,14 @@ function nodeCircleClasses(level: Level): string {
     }
 
     return 'border-slate-300 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-600';
+}
+
+function goToHighscorePage(page: number): void {
+    router.get(
+        home.url({ query: { page } }),
+        {},
+        { only: ['highscores'], preserveState: true, preserveScroll: true },
+    );
 }
 
 const progressShareText = computed(
@@ -214,9 +224,47 @@ const progressShareText = computed(
                     class="w-full shrink-0 lg:sticky lg:top-10 lg:w-64 lg:self-start"
                 >
                     <Leaderboard
-                        :highscores="highscores"
+                        :highscores="highscores.data"
                         :player-name="progress.playerName.value"
+                        :start-rank="
+                            (highscores.current_page - 1) *
+                                highscores.per_page +
+                            1
+                        "
                     />
+                    <div
+                        v-if="highscores.last_page > 1"
+                        class="mt-3 flex items-center justify-between"
+                    >
+                        <button
+                            type="button"
+                            :disabled="highscores.current_page === 1"
+                            class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400"
+                            @click="
+                                goToHighscorePage(highscores.current_page - 1)
+                            "
+                        >
+                            ◂ Prev
+                        </button>
+                        <span
+                            class="font-mono text-xs text-slate-400 tabular-nums dark:text-slate-500"
+                            >{{ highscores.current_page }}/{{
+                                highscores.last_page
+                            }}</span
+                        >
+                        <button
+                            type="button"
+                            :disabled="
+                                highscores.current_page === highscores.last_page
+                            "
+                            class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400"
+                            @click="
+                                goToHighscorePage(highscores.current_page + 1)
+                            "
+                        >
+                            Next ▸
+                        </button>
+                    </div>
                     <div class="mt-3 flex justify-center">
                         <ShareOnXButton :text="progressShareText" />
                     </div>

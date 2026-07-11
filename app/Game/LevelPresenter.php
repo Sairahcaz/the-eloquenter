@@ -39,26 +39,43 @@ class LevelPresenter
             'id' => $definition->id,
             'title' => $definition->title,
             'task' => $definition->task,
-            'relation' => $extraction->type->value,
             'mode' => $definition->mode->value,
-            'hint' => $definition->hint,
+            'hasHint' => $definition->hint !== null,
             'tables' => $this->tables($definition, $extraction),
         ];
 
         return $level + match ($definition->mode) {
+            // The relation name is teaching material in connect mode, but it
+            // would spoil the answer in guess and code mode.
             Mode::Connect => [
-                'expectedConnections' => $connections,
+                'relation' => $extraction->type->value,
+                'expectedCount' => count($connections),
             ],
             Mode::Guess => [
                 'shownConnections' => $connections,
                 'perspective' => $definition->perspective,
                 'choices' => array_map(fn (RelationType $type) => $type->value, $definition->guessChoices ?? []),
-                'answer' => $extraction->type->value,
             ],
             Mode::Code => [
                 'shownConnections' => $connections,
-            ] + $this->codeReconstructor->reconstruct($definition->model, $definition->method),
+            ] + $this->withoutCodeAnswers($this->codeReconstructor->reconstruct($definition->model, $definition->method)),
         };
+    }
+
+    /**
+     * The answers stay on the server; the client only sees the options.
+     *
+     * @param  array{model: string, method: string, codeParts: list<string|array{id: string, options: list<string>, answer: string}>}  $reconstruction
+     * @return array{model: string, method: string, codeParts: list<string|array{id: string, options: list<string>}>}
+     */
+    private function withoutCodeAnswers(array $reconstruction): array
+    {
+        $reconstruction['codeParts'] = array_map(
+            fn (string|array $part) => is_array($part) ? ['id' => $part['id'], 'options' => $part['options']] : $part,
+            $reconstruction['codeParts'],
+        );
+
+        return $reconstruction;
     }
 
     /**

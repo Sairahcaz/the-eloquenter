@@ -3,7 +3,7 @@ import type { Level } from '@/game/types';
 
 defineProps<{
     level: Level;
-    hintVisible: boolean;
+    hintText: string | null;
 }>();
 
 const emit = defineEmits<{ back: []; showHint: [] }>();
@@ -48,7 +48,7 @@ const emit = defineEmits<{ back: []; showHint: [] }>();
                     {{ level.relation }}
                 </span>
                 <button
-                    v-if="level.hint && !hintVisible"
+                    v-if="level.hasHint && !hintText"
                     type="button"
                     class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-star hover:text-star dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                     @click="emit('showHint')"
@@ -58,10 +58,10 @@ const emit = defineEmits<{ back: []; showHint: [] }>();
             </div>
         </div>
         <p
-            v-if="hintVisible && level.hint"
+            v-if="hintText"
             class="rounded-lg border border-star/30 bg-star/10 px-3 py-2 text-sm text-slate-700 dark:text-slate-300"
         >
-            💡 {{ level.hint }}
+            💡 {{ hintText }}
         </p>
     </div>
 </template>

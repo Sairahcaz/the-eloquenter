@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useHttp } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
-import type { CodeBlank, CodeLevel } from '@/game/types';
+import type { CodeBlank, CodeJudgement, CodeLevel } from '@/game/types';
+import { code as codeRoute } from '@/routes/levels';
 
 const props = defineProps<{ level: CodeLevel }>();
 
-const emit = defineEmits<{ correct: []; mistake: [] }>();
+const emit = defineEmits<{ correct: [judgement: CodeJudgement] }>();
 
 function isBlank(part: string | CodeBlank): part is CodeBlank {
     return typeof part !== 'string';
@@ -35,6 +37,10 @@ const activeBlankId = ref<string | null>(blanks.value[0]?.id ?? null);
 
 const flashingWrong = reactive(new Set<string>());
 const solved = ref(false);
+
+const http = useHttp<{ answers: Record<string, string> }, CodeJudgement>({
+    answers: {},
+});
 
 const activeOptions = computed(() =>
     activeBlankId.value ? (shuffledOptions.get(activeBlankId.value) ?? []) : [],
@@ -70,35 +76,37 @@ function pickOption(option: string): void {
 }
 
 function run(): void {
-    if (solved.value || !allFilled.value) {
+    if (solved.value || !allFilled.value || http.processing) {
         return;
     }
 
-    const wrong = blanks.value.filter(
-        (blank) => filled[blank.id] !== blank.answer,
+    http.answers = Object.fromEntries(
+        blanks.value.map((blank) => [blank.id, filled[blank.id] as string]),
     );
 
-    if (wrong.length === 0) {
-        solved.value = true;
-        emit('correct');
+    http.post(codeRoute.url(props.level.id), {
+        onSuccess: (judgement) => {
+            if (judgement.correct) {
+                solved.value = true;
+                emit('correct', judgement);
 
-        return;
-    }
+                return;
+            }
 
-    emit('mistake');
+            for (const blankId of judgement.wrongBlanks) {
+                flashingWrong.add(blankId);
+            }
 
-    for (const blank of wrong) {
-        flashingWrong.add(blank.id);
-    }
+            setTimeout(() => {
+                for (const blankId of judgement.wrongBlanks) {
+                    filled[blankId] = null;
+                    flashingWrong.delete(blankId);
+                }
 
-    setTimeout(() => {
-        for (const blank of wrong) {
-            filled[blank.id] = null;
-            flashingWrong.delete(blank.id);
-        }
-
-        activeBlankId.value = firstEmptyBlank();
-    }, 550);
+                activeBlankId.value = firstEmptyBlank();
+            }, 550);
+        },
+    });
 }
 </script>
 
@@ -166,7 +174,7 @@ function run(): void {
         <button
             v-if="!solved"
             type="button"
-            :disabled="!allFilled"
+            :disabled="!allFilled || http.processing"
             class="mx-auto rounded-xl bg-accent px-6 py-2.5 font-semibold text-white shadow-lg shadow-accent/25 transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             @click="run"
         >

@@ -2,11 +2,10 @@
 
 namespace App\Http\Requests;
 
-use App\Game\Levels;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreHighscoreRequest extends FormRequest
+class CodeAttemptRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,8 +18,8 @@ class StoreHighscoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:30'],
-            'stars' => ['required', 'integer', 'min:0', 'max:'.count(Levels::all()) * 3],
+            'answers' => ['required', 'array'],
+            'answers.*' => ['required', 'string', 'max:100'],
         ];
     }
 }

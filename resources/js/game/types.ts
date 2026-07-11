@@ -44,14 +44,14 @@ interface LevelBase {
     id: string;
     title: string;
     task: string;
-    relation: RelationType;
-    hint: string | null;
+    hasHint: boolean;
     tables: TableCardDef[];
 }
 
 export interface ConnectLevel extends LevelBase {
     mode: 'connect';
-    expectedConnections: ConnectionDef[];
+    relation: RelationType;
+    expectedCount: number;
 }
 
 export interface GuessLevel extends LevelBase {
@@ -59,13 +59,11 @@ export interface GuessLevel extends LevelBase {
     shownConnections: ConnectionDef[];
     perspective: string;
     choices: RelationType[];
-    answer: RelationType;
 }
 
 export interface CodeBlank {
     id: string;
     options: string[];
-    answer: string;
 }
 
 export interface CodeLevel extends LevelBase {
@@ -90,10 +88,53 @@ export interface HighscoreEntry {
     stars: number;
 }
 
+export interface Paginated<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+}
+
+export interface PlayerIdentity {
+    name: string;
+    token: string;
+}
+
+export interface ConnectionJudgement {
+    correct: boolean;
+    solved: boolean;
+    stars: number | null;
+    made: number;
+    relation: RelationType | null;
+}
+
+export interface GuessJudgement {
+    correct: boolean;
+    stars: number | null;
+    relation: RelationType | null;
+}
+
+export interface CodeJudgement {
+    correct: boolean;
+    stars: number | null;
+    wrongBlanks: string[];
+    relation: RelationType | null;
+    statement: string | null;
+}
+
+export interface LevelResult {
+    stars: number;
+    relation: RelationType;
+    statement: string | null;
+}
+
+/**
+ * The connections shown to the player. In connect mode the solution lives
+ * on the server only, so there is nothing to draw upfront.
+ */
 export function levelConnections(level: Level): ConnectionDef[] {
-    return level.mode === 'connect'
-        ? level.expectedConnections
-        : level.shownConnections;
+    return level.mode === 'connect' ? [] : level.shownConnections;
 }
 
 export function columnRefKey(ref: ColumnRef): string {
