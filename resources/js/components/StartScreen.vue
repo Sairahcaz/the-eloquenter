@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import { computed, onMounted, ref, watch } from 'vue';
 import Leaderboard from '@/components/Leaderboard.vue';
 import {
     forgetIdentity,
@@ -14,7 +15,28 @@ const emit = defineEmits<{ start: [name: string] }>();
 
 const progress = useGameProgress();
 
+const page = usePage();
+
 const name = ref('');
+
+// Editing the name hides a stale server error until the next submit
+// pushes a fresh errors object into the page props.
+const errorDismissed = ref(false);
+
+watch(name, () => {
+    errorDismissed.value = true;
+});
+
+watch(
+    () => page.props.errors,
+    () => {
+        errorDismissed.value = false;
+    },
+);
+
+const nameError = computed(() =>
+    errorDismissed.value ? '' : (page.props.errors.name ?? ''),
+);
 
 // Only revealed after mount: the server render has no localStorage, so
 // showing the returning-player button immediately would break hydration.
@@ -128,8 +150,24 @@ function submit(): void {
                             placeholder="Enter your name"
                             autocomplete="off"
                             maxlength="30"
-                            class="rounded-xl border border-orange-950/15 bg-white px-4 py-3 text-center text-lg text-slate-900 shadow-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/40 dark:border-white/15 dark:bg-slate-950 dark:text-white"
+                            :aria-invalid="nameError ? 'true' : undefined"
+                            :aria-describedby="
+                                nameError ? 'player-name-error' : undefined
+                            "
+                            class="rounded-xl border bg-white px-4 py-3 text-center text-lg text-slate-900 shadow-sm outline-none focus:ring-2 dark:bg-slate-950 dark:text-white"
+                            :class="
+                                nameError
+                                    ? 'border-red-400 focus:border-red-400 focus:ring-red-400/40 dark:border-red-400/60'
+                                    : 'border-orange-950/15 focus:border-accent focus:ring-accent/40 dark:border-white/15'
+                            "
                         />
+                        <p
+                            v-if="nameError"
+                            id="player-name-error"
+                            class="text-center text-sm text-red-500 dark:text-red-400"
+                        >
+                            {{ nameError }}
+                        </p>
                         <button
                             type="submit"
                             :disabled="!name.trim()"

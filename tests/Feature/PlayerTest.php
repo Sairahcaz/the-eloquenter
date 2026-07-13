@@ -27,10 +27,22 @@ it('resumes an existing player by token', function () {
 it('creates a fresh player for an unknown token', function () {
     Player::factory()->create(['name' => 'Zach']);
 
-    $this->post(route('players.store'), ['name' => 'Zach', 'token' => Str::uuid()->toString()]);
+    $this->post(route('players.store'), ['name' => 'Nora', 'token' => Str::uuid()->toString()]);
 
     expect(Player::count())->toBe(2);
 });
+
+it('rejects a name that already belongs to another player', function (?string $token) {
+    Player::factory()->create(['name' => 'Zach']);
+
+    $this->post(route('players.store'), array_filter(['name' => 'zach', 'token' => $token]))
+        ->assertSessionHasErrors('name');
+
+    expect(Player::count())->toBe(1);
+})->with([
+    'without token' => [null],
+    'with unknown token' => [Str::uuid()->toString()],
+]);
 
 it('rejects invalid join payloads', function (array $payload) {
     $this->post(route('players.store'), $payload)->assertSessionHasErrors();
