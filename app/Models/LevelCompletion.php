@@ -14,10 +14,11 @@ use Illuminate\Support\Carbon;
  * @property int $player_id
  * @property string $level_id
  * @property int $stars
+ * @property int|null $duration_seconds
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['player_id', 'level_id', 'stars'])]
+#[Fillable(['player_id', 'level_id', 'stars', 'duration_seconds'])]
 class LevelCompletion extends Model
 {
     /** @use HasFactory<LevelCompletionFactory> */

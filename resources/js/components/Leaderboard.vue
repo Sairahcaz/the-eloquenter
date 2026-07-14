@@ -9,6 +9,15 @@ withDefaults(
     }>(),
     { playerName: '', startRank: 1 },
 );
+
+function formatDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+
+    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
 </script>
 
 <template>
@@ -39,7 +48,7 @@ withDefaults(
         <ol v-else class="mt-3 flex flex-col gap-1.5">
             <li
                 v-for="(entry, index) in highscores"
-                :key="entry.stars"
+                :key="`${entry.stars}-${entry.seconds}`"
                 class="flex items-center justify-between gap-2 rounded-lg py-1.5 pr-4 pl-3 text-sm"
                 :class="
                     entry.names.includes(playerName)
@@ -69,6 +78,9 @@ withDefaults(
                             d="M12 2l2.94 5.96 6.58.96-4.76 4.64 1.12 6.55L12 17.02l-5.88 3.09 1.12-6.55L2.48 8.92l6.58-.96L12 2z"
                         />
                     </svg>
+                    <span class="text-slate-400 dark:text-slate-500">
+                        {{ formatDuration(entry.seconds) }}
+                    </span>
                 </span>
             </li>
         </ol>

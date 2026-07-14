@@ -24,6 +24,7 @@ class LevelAttemptFactory extends Factory
             'mistakes' => 0,
             'hint_used' => false,
             'made_connections' => [],
+            'started_at' => now(),
         ];
     }
 }

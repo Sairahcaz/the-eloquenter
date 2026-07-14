@@ -22,6 +22,7 @@ class LevelCompletionFactory extends Factory
             'player_id' => Player::factory(),
             'level_id' => Arr::random(Levels::all())->id,
             'stars' => fake()->numberBetween(1, 3),
+            'duration_seconds' => fake()->numberBetween(5, 600),
         ];
     }
 }

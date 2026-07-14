@@ -162,6 +162,69 @@ it('keeps the best star rating across replays', function () {
     ]);
 });
 
+it('records the solve time from attempt start', function () {
+    $player = playerAt('c1-l1');
+
+    $this->freezeSecond();
+    $this->postJson(route('levels.attempt', 'c1-l1'))->assertNoContent();
+
+    $this->travel(42)->seconds();
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'));
+
+    $this->assertDatabaseHas('level_completions', [
+        'player_id' => $player->id,
+        'level_id' => 'c1-l1',
+        'duration_seconds' => 42,
+    ]);
+});
+
+it('keeps the faster time across equal-star replays', function () {
+    $player = playerAt('c1-l1');
+
+    $this->freezeSecond();
+    $this->postJson(route('levels.attempt', 'c1-l1'));
+    $this->travel(42)->seconds();
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'));
+
+    $this->postJson(route('levels.attempt', 'c1-l1'));
+    $this->travel(10)->seconds();
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'));
+
+    $this->postJson(route('levels.attempt', 'c1-l1'));
+    $this->travel(99)->seconds();
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'));
+
+    $this->assertDatabaseHas('level_completions', [
+        'player_id' => $player->id,
+        'level_id' => 'c1-l1',
+        'stars' => 3,
+        'duration_seconds' => 10,
+    ]);
+});
+
+it('takes the time of the better-starred run even when slower', function () {
+    $player = playerAt('c1-l1');
+
+    $this->freezeSecond();
+    $this->postJson(route('levels.attempt', 'c1-l1'));
+    $this->postJson(route('levels.hint', 'c1-l1'));
+    $this->travel(10)->seconds();
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'))
+        ->assertJson(['stars' => 2]);
+
+    $this->postJson(route('levels.attempt', 'c1-l1'));
+    $this->travel(99)->seconds();
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'))
+        ->assertJson(['stars' => 3]);
+
+    $this->assertDatabaseHas('level_completions', [
+        'player_id' => $player->id,
+        'level_id' => 'c1-l1',
+        'stars' => 3,
+        'duration_seconds' => 99,
+    ]);
+});
+
 it('solves a multi-connection level only after every connection', function () {
     playerAt('c3-l1');
 

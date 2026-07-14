@@ -4,7 +4,7 @@ use App\Models\LevelCompletion;
 use App\Models\Player;
 use Inertia\Testing\AssertableInertia as Assert;
 
-function playerWithStars(string $name, array $starsPerLevel): Player
+function playerWithStars(string $name, array $starsPerLevel, int $secondsPerLevel = 60): Player
 {
     $player = Player::factory()->create(['name' => $name]);
 
@@ -13,6 +13,7 @@ function playerWithStars(string $name, array $starsPerLevel): Player
             'player_id' => $player->id,
             'level_id' => $levelId,
             'stars' => $stars,
+            'duration_seconds' => $secondsPerLevel,
         ]);
     }
 
@@ -39,8 +40,22 @@ it('ranks players by their summed stars', function () {
             ->component('Game')
             ->where('topHighscores.0.names', ['Champion'])
             ->where('topHighscores.0.stars', 6)
+            ->where('topHighscores.0.seconds', 120)
             ->where('topHighscores.1.names', ['Runner-up'])
             ->where('topHighscores.1.stars', 5)
+        );
+});
+
+it('breaks star ties by total play time', function () {
+    playerWithStars('Slowpoke', ['c1-l1' => 3, 'c1-l2' => 3], secondsPerLevel: 90);
+    playerWithStars('Speedster', ['c1-l1' => 3, 'c1-l2' => 3], secondsPerLevel: 30);
+
+    $this->get(route('home'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('topHighscores.0.names', ['Speedster'])
+            ->where('topHighscores.0.seconds', 60)
+            ->where('topHighscores.1.names', ['Slowpoke'])
+            ->where('topHighscores.1.seconds', 180)
         );
 });
 

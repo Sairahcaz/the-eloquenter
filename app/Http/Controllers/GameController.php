@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use stdClass;
 
 class GameController extends Controller
 {
@@ -32,8 +33,10 @@ class GameController extends Controller
     }
 
     /**
-     * One row per distinct star total (tied players share a rank), with
-     * the tied names aggregated in random order on every load.
+     * Ranked by star total, total play time breaking ties (faster wins).
+     * One row per distinct (stars, seconds) pair so still-tied players
+     * share a rank, with their names aggregated in random order on every
+     * load.
      */
     private function leaderboard(): Builder
     {
@@ -41,7 +44,8 @@ class GameController extends Controller
             ->join('level_completions', 'level_completions.player_id', '=', 'players.id')
             ->groupBy('players.id', 'players.name')
             ->select('players.name')
-            ->selectRaw('SUM(level_completions.stars) as stars');
+            ->selectRaw('SUM(level_completions.stars) as stars')
+            ->selectRaw('SUM(COALESCE(level_completions.duration_seconds, 0)) as seconds');
 
         // json_group_array needs SQLite >= 3.44 for ORDER BY inside aggregates.
         $namesAggregate = DB::connection()->getDriverName() === 'sqlite'
@@ -50,17 +54,22 @@ class GameController extends Controller
 
         return DB::query()
             ->fromSub($totals, 'totals')
-            ->groupBy('stars')
-            ->select('stars')
+            ->groupBy('stars', 'seconds')
+            ->select('stars', 'seconds')
             ->selectRaw("{$namesAggregate} as names")
-            ->orderByDesc('stars');
+            ->orderByDesc('stars')
+            ->orderBy('seconds');
     }
 
     /**
-     * @return array{names: list<string>, stars: int}
+     * @return array{names: list<string>, stars: int, seconds: int}
      */
-    private function toEntry(object $row): array
+    private function toEntry(stdClass $row): array
     {
-        return ['names' => json_decode((string) $row->names), 'stars' => (int) $row->stars];
+        return [
+            'names' => json_decode((string) $row->names),
+            'stars' => (int) $row->stars,
+            'seconds' => (int) $row->seconds,
+        ];
     }
 }

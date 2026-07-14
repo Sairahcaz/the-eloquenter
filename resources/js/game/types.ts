@@ -86,6 +86,7 @@ export interface Chapter {
 export interface HighscoreEntry {
     names: string[];
     stars: number;
+    seconds: number;
 }
 
 export interface Paginated<T> {

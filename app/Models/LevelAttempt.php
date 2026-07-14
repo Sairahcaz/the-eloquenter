@@ -19,10 +19,11 @@ use Illuminate\Support\Carbon;
  * @property int $mistakes
  * @property bool $hint_used
  * @property list<array{from: array{table: string, column: string}, to: array{table: string, column: string}}> $made_connections
+ * @property Carbon|null $started_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['player_id', 'level_id', 'mistakes', 'hint_used', 'made_connections'])]
+#[Fillable(['player_id', 'level_id', 'mistakes', 'hint_used', 'made_connections', 'started_at'])]
 class LevelAttempt extends Model
 {
     /** @use HasFactory<LevelAttemptFactory> */
@@ -36,6 +37,7 @@ class LevelAttempt extends Model
         return [
             'hint_used' => 'boolean',
             'made_connections' => 'array',
+            'started_at' => 'datetime',
         ];
     }
 

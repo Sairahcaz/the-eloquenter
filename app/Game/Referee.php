@@ -31,7 +31,7 @@ class Referee
     {
         $player->attempts()->updateOrCreate(
             ['level_id' => $level->id],
-            ['mistakes' => 0, 'hint_used' => false, 'made_connections' => []],
+            ['mistakes' => 0, 'hint_used' => false, 'made_connections' => [], 'started_at' => now()],
         );
     }
 
@@ -140,6 +140,10 @@ class Referee
         return $level->hint;
     }
 
+    /**
+     * Records the run, keeping the best one per level: more stars wins,
+     * equal stars keep the faster time.
+     */
     private function complete(Player $player, LevelDefinition $level, LevelAttempt $attempt): int
     {
         $stars = max(1, 3 - $attempt->mistakes);
@@ -148,8 +152,18 @@ class Referee
             $stars = min($stars, 2);
         }
 
+        $startedAt = $attempt->started_at ?? $attempt->updated_at ?? now();
+        $seconds = max(0, (int) $startedAt->diffInSeconds(now()));
+
         $completion = $player->completions()->firstOrNew(['level_id' => $level->id]);
-        $completion->stars = max($completion->stars ?? 0, $stars);
+
+        if ($stars > ($completion->stars ?? 0)) {
+            $completion->stars = $stars;
+            $completion->duration_seconds = $seconds;
+        } elseif ($stars === $completion->stars && $seconds < ($completion->duration_seconds ?? PHP_INT_MAX)) {
+            $completion->duration_seconds = $seconds;
+        }
+
         $completion->save();
 
         return $stars;
@@ -159,7 +173,7 @@ class Referee
     {
         return $player->attempts()->firstOrCreate(
             ['level_id' => $level->id],
-            ['mistakes' => 0, 'hint_used' => false, 'made_connections' => []],
+            ['mistakes' => 0, 'hint_used' => false, 'made_connections' => [], 'started_at' => now()],
         );
     }
 
