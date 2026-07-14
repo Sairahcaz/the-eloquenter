@@ -33,7 +33,7 @@ class GameController extends Controller
 
     /**
      * One row per distinct star total (tied players share a rank), with
-     * the tied names aggregated in the order they reached that total.
+     * the tied names aggregated in random order on every load.
      */
     private function leaderboard(): Builder
     {
@@ -41,13 +41,12 @@ class GameController extends Controller
             ->join('level_completions', 'level_completions.player_id', '=', 'players.id')
             ->groupBy('players.id', 'players.name')
             ->select('players.name')
-            ->selectRaw('SUM(level_completions.stars) as stars')
-            ->selectRaw('MAX(level_completions.updated_at) as latest_completion');
+            ->selectRaw('SUM(level_completions.stars) as stars');
 
         // json_group_array needs SQLite >= 3.44 for ORDER BY inside aggregates.
         $namesAggregate = DB::connection()->getDriverName() === 'sqlite'
-            ? 'json_group_array(name ORDER BY latest_completion, name)'
-            : 'json_agg(name ORDER BY latest_completion, name)';
+            ? 'json_group_array(name ORDER BY random())'
+            : 'json_agg(name ORDER BY random())';
 
         return DB::query()
             ->fromSub($totals, 'totals')

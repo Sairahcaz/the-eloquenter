@@ -52,7 +52,7 @@ it('groups tied players into a shared rank', function () {
     $this->get(route('home'))
         ->assertInertia(fn (Assert $page) => $page
             ->has('topHighscores', 2)
-            ->where('topHighscores.0.names', ['Alice', 'Bob'])
+            ->where('topHighscores.0.names', fn ($names) => collect($names)->sort()->values()->all() === ['Alice', 'Bob'])
             ->where('topHighscores.0.stars', 5)
             ->where('topHighscores.1.names', ['Carol'])
             ->where('topHighscores.1.stars', 3)
