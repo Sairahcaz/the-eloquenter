@@ -84,7 +84,7 @@ export interface Chapter {
 }
 
 export interface HighscoreEntry {
-    name: string;
+    names: string[];
     stars: number;
 }
 

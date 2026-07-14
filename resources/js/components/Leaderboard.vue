@@ -39,22 +39,26 @@ withDefaults(
         <ol v-else class="mt-3 flex flex-col gap-1.5">
             <li
                 v-for="(entry, index) in highscores"
-                :key="entry.name"
-                class="flex items-center justify-between rounded-lg py-1.5 pr-4 pl-3 text-sm"
+                :key="entry.stars"
+                class="flex items-center justify-between gap-2 rounded-lg py-1.5 pr-4 pl-3 text-sm"
                 :class="
-                    entry.name === playerName
+                    entry.names.includes(playerName)
                         ? 'bg-accent/10 font-semibold text-accent'
                         : 'text-slate-700 dark:text-slate-300'
                 "
             >
-                <span class="flex items-center gap-3">
+                <span class="flex min-w-0 items-center gap-3">
                     <span
-                        class="w-5 text-right font-mono text-xs text-slate-400"
+                        class="w-5 shrink-0 text-right font-mono text-xs text-slate-400"
                         >{{ startRank + index }}</span
                     >
-                    {{ entry.name }}
+                    <span class="truncate" :title="entry.names.join(', ')">{{
+                        entry.names.join(', ')
+                    }}</span>
                 </span>
-                <span class="flex items-center gap-1 font-mono text-xs">
+                <span
+                    class="flex shrink-0 items-center gap-1 font-mono text-xs"
+                >
                     {{ entry.stars }}
                     <svg
                         viewBox="0 0 24 24"
