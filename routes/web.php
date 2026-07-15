@@ -15,4 +15,5 @@ Route::prefix('/levels/{levelId}')->name('levels.')->middleware('throttle:120,1'
     Route::post('/guess', [LevelPlayController::class, 'guess'])->name('guess');
     Route::post('/code', [LevelPlayController::class, 'code'])->name('code');
     Route::post('/hint', [LevelPlayController::class, 'hint'])->name('hint');
+    Route::get('/solution', [LevelPlayController::class, 'solution'])->name('solution');
 });

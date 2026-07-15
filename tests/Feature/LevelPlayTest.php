@@ -243,6 +243,37 @@ it('ignores a repeated correct connection', function () {
         ->assertJson(['correct' => true, 'solved' => false, 'made' => 1]);
 });
 
+it('reveals the solution only after completing the level', function () {
+    playerAt('c1-l1');
+
+    $this->getJson(route('levels.solution', 'c1-l1'))->assertForbidden();
+
+    $this->postJson(route('levels.connections', 'c1-l1'), expectedConnectionFor('c1-l1'));
+
+    $this->getJson(route('levels.solution', 'c1-l1'))
+        ->assertSuccessful()
+        ->assertJson([
+            'connections' => [expectedConnectionFor('c1-l1')],
+            'relation' => 'hasOne',
+            'statement' => null,
+        ]);
+});
+
+it('includes the code statement in a code level solution', function () {
+    $player = playerAt('c1-l3');
+
+    LevelCompletion::factory()->create([
+        'player_id' => $player->id,
+        'level_id' => 'c1-l3',
+        'stars' => 3,
+    ]);
+
+    $response = $this->getJson(route('levels.solution', 'c1-l3'))->assertSuccessful();
+
+    expect($response->json('relation'))->toBe('hasOne')
+        ->and($response->json('statement'))->toContain('hasOne');
+});
+
 it('judges guesses server-side', function () {
     $player = playerAt('c1-l2');
 

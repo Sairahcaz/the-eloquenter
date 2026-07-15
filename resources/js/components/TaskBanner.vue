@@ -4,6 +4,7 @@ import type { Level } from '@/game/types';
 defineProps<{
     level: Level;
     hintText: string | null;
+    reviewing?: boolean;
 }>();
 
 const emit = defineEmits<{ back: []; showHint: [] }>();
@@ -42,13 +43,19 @@ const emit = defineEmits<{ back: []; showHint: [] }>();
             </div>
             <div class="flex shrink-0 items-center gap-2">
                 <span
+                    v-if="reviewing"
+                    class="rounded-full bg-success/10 px-3 py-1 font-mono text-xs font-semibold text-success"
+                >
+                    ✓ Completed
+                </span>
+                <span
                     v-if="level.mode === 'connect'"
                     class="rounded-full bg-accent/10 px-3 py-1 font-mono text-xs font-semibold text-accent"
                 >
                     {{ level.relation }}
                 </span>
                 <button
-                    v-if="level.hasHint && !hintText"
+                    v-if="level.hasHint && !hintText && !reviewing"
                     type="button"
                     class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-star hover:text-star dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                     @click="emit('showHint')"

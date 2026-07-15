@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted } from 'vue';
+import { computed, inject } from 'vue';
 import { boardApiKey } from '@/game/board';
 import type { AnchorSide } from '@/game/geometry';
 import type { ColumnRef, TableColumn } from '@/game/types';
@@ -41,25 +41,20 @@ const badgeLabels: Record<string, string> = {
     morph: 'TYPE',
 };
 
+// Registering directly in the template-ref callback keeps the registry in
+// sync when dots appear or disappear after mount, e.g. when a review board
+// switches into replay mode.
 function setDotEl(side: AnchorSide, el: unknown): void {
     if (el instanceof HTMLElement) {
-        dotEls.set(side, el);
-    } else {
+        if (dotEls.get(side) !== el) {
+            dotEls.set(side, el);
+            board.registerDot(columnRef.value, side, el);
+        }
+    } else if (dotEls.has(side)) {
         dotEls.delete(side);
-    }
-}
-
-onMounted(() => {
-    for (const [side, el] of dotEls) {
-        board.registerDot(columnRef.value, side, el);
-    }
-});
-
-onBeforeUnmount(() => {
-    for (const side of dotEls.keys()) {
         board.unregisterDot(columnRef.value, side);
     }
-});
+}
 </script>
 
 <template>

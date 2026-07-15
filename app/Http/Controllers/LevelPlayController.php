@@ -65,6 +65,15 @@ class LevelPlayController extends Controller
         ));
     }
 
+    public function solution(Request $request, string $levelId): JsonResponse
+    {
+        [$player, $level] = $this->resolve($request, $levelId);
+
+        abort_unless($this->referee->hasCompleted($player, $level), 403, 'Complete the level first.');
+
+        return response()->json($this->referee->solution($level));
+    }
+
     public function hint(Request $request, string $levelId): JsonResponse
     {
         [$player, $level] = $this->resolve($request, $levelId);

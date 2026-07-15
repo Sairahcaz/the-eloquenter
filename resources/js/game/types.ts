@@ -130,6 +130,12 @@ export interface LevelResult {
     statement: string | null;
 }
 
+export interface LevelSolution {
+    connections: ConnectionDef[];
+    relation: RelationType;
+    statement: string | null;
+}
+
 /**
  * The connections shown to the player. In connect mode the solution lives
  * on the server only, so there is nothing to draw upfront.

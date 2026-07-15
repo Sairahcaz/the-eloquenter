@@ -23,8 +23,26 @@ class Referee
     {
         $previous = Levels::previous($level->id);
 
-        return $previous === null
-            || $player->completions()->where('level_id', $previous->id)->exists();
+        return $previous === null || $this->hasCompleted($player, $previous);
+    }
+
+    public function hasCompleted(Player $player, LevelDefinition $level): bool
+    {
+        return $player->completions()->where('level_id', $level->id)->exists();
+    }
+
+    /**
+     * The full solution for reviewing a level the player already beat.
+     *
+     * @return array{connections: list<array{from: array{table: string, column: string}, to: array{table: string, column: string}}>, relation: string, statement: string|null}
+     */
+    public function solution(LevelDefinition $level): array
+    {
+        return [
+            'connections' => $this->expectedConnections($level),
+            'relation' => $this->extraction($level)->type->value,
+            'statement' => $level->mode === Mode::Code ? $this->codeStatement($level) : null,
+        ];
     }
 
     public function startAttempt(Player $player, LevelDefinition $level): void

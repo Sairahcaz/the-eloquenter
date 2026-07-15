@@ -4,14 +4,17 @@ import { computed, onMounted, provide, reactive, ref } from 'vue';
 import AnswerChoices from '@/components/AnswerChoices.vue';
 import CodeCompletion from '@/components/CodeCompletion.vue';
 import ConnectionLayer from '@/components/ConnectionLayer.vue';
+import StarRating from '@/components/StarRating.vue';
 import TableCard from '@/components/TableCard.vue';
 import TaskBanner from '@/components/TaskBanner.vue';
 import { useAnchorRegistry } from '@/composables/useAnchorRegistry';
 import { useConnectionDrag } from '@/composables/useConnectionDrag';
+import { useGameProgress } from '@/composables/useGameProgress';
 import { boardApiKey } from '@/game/board';
 import type { BoardApi, DotStatus } from '@/game/board';
 import { connectionPath, dragPath } from '@/game/geometry';
 import type { Anchor, AnchorSide, RenderedConnection } from '@/game/geometry';
+import { relationDescriptions } from '@/game/relations';
 import { columnRefKey, levelConnections, sameConnection } from '@/game/types';
 import type {
     CodeJudgement,
@@ -21,11 +24,13 @@ import type {
     GuessJudgement,
     Level,
     LevelResult,
+    LevelSolution,
 } from '@/game/types';
 import {
     attempt as attemptRoute,
     connections as connectionsRoute,
     hint as hintRoute,
+    solution as solutionRoute,
 } from '@/routes/levels';
 
 const props = defineProps<{ level: Level }>();
@@ -34,11 +39,18 @@ const emit = defineEmits<{ complete: [result: LevelResult]; back: [] }>();
 
 const boardEl = ref<HTMLElement | null>(null);
 
+const progress = useGameProgress();
+
 const made = ref<ConnectionDef[]>([]);
 const rejected = ref<ConnectionDef | null>(null);
 const hintText = ref<string | null>(null);
 const solved = ref(false);
 const shakeSignals = reactive<Record<string, number>>({});
+
+// A completed level opens in review: the earlier solution is displayed and
+// no attempt starts until the player explicitly hits replay.
+const reviewing = ref(progress.isCompleted(props.level.id));
+const solution = ref<LevelSolution | null>(null);
 
 const attemptHttp = useHttp({});
 const connectionHttp = useHttp<
@@ -46,15 +58,28 @@ const connectionHttp = useHttp<
     ConnectionJudgement
 >({ from: null, to: null });
 const hintHttp = useHttp<Record<string, never>, { hint: string }>({});
+const solutionHttp = useHttp<Record<string, never>, LevelSolution>({});
 
-// Every level open resets the server-side attempt, so mistakes from an
-// earlier run don't bleed into this one.
+// Every fresh level open resets the server-side attempt, so mistakes from
+// an earlier run don't bleed into this one.
 onMounted(() => {
-    attemptHttp.post(attemptRoute.url(props.level.id));
+    if (reviewing.value) {
+        solutionHttp.get(solutionRoute.url(props.level.id), {
+            onSuccess: (response) => (solution.value = response),
+        });
+    } else {
+        attemptHttp.post(attemptRoute.url(props.level.id));
+    }
 });
 
+function startReplay(): void {
+    reviewing.value = false;
+    solution.value = null;
+    attemptHttp.post(attemptRoute.url(props.level.id));
+}
+
 const interactive = computed(
-    () => props.level.mode === 'connect' && !solved.value,
+    () => props.level.mode === 'connect' && !solved.value && !reviewing.value,
 );
 
 const tableCols = computed(() =>
@@ -70,9 +95,19 @@ function touchesRef(connection: ConnectionDef, ref: ColumnRef): boolean {
     );
 }
 
+// The connections drawn on the board without player input: the level's own
+// display connections in guess/code mode, the fetched solution in review.
+const shownConnections = computed<ConnectionDef[]>(() => {
+    if (props.level.mode !== 'connect') {
+        return levelConnections(props.level);
+    }
+
+    return reviewing.value ? (solution.value?.connections ?? []) : [];
+});
+
 function answerSide(ref: ColumnRef): AnchorSide {
     const ownCol = tableCols.value[ref.table] ?? 1;
-    const connection = levelConnections(props.level).find((candidate) =>
+    const connection = shownConnections.value.find((candidate) =>
         touchesRef(candidate, ref),
     );
 
@@ -208,8 +243,10 @@ function revealHint(): void {
 const boardApi: BoardApi = {
     isInteractive: () => interactive.value,
     // In connect mode every column gets a dot; only key columns would give
-    // the answer away.
-    allColumnsConnectable: () => props.level.mode === 'connect',
+    // the answer away. In review the answer is out anyway, so only the key
+    // columns keep their dots, like in guess and code mode.
+    allColumnsConnectable: () =>
+        props.level.mode === 'connect' && !reviewing.value,
     registerDot: registry.registerDot,
     unregisterDot: registry.unregisterDot,
     dotSides,
@@ -219,6 +256,14 @@ const boardApi: BoardApi = {
             columnRefKey(drag.dragFrom.value) === columnRefKey(ref)
         ) {
             return 'dragging';
+        }
+
+        if (reviewing.value) {
+            return shownConnections.value.some((connection) =>
+                touchesRef(connection, ref),
+            )
+                ? 'connected'
+                : 'idle';
         }
 
         if (
@@ -246,7 +291,11 @@ const renderedConnections = computed<RenderedConnection[]>(() => {
         delayMs: number;
     }> = [];
 
-    if (props.level.mode === 'connect') {
+    if (reviewing.value) {
+        shownConnections.value.forEach((connection, index) =>
+            items.push({ connection, state: 'made', delayMs: index * 220 }),
+        );
+    } else if (props.level.mode === 'connect') {
         made.value.forEach((connection) =>
             items.push({ connection, state: 'made', delayMs: 0 }),
         );
@@ -259,7 +308,7 @@ const renderedConnections = computed<RenderedConnection[]>(() => {
             });
         }
     } else {
-        levelConnections(props.level).forEach((connection, index) =>
+        shownConnections.value.forEach((connection, index) =>
             items.push({ connection, state: 'locked', delayMs: index * 220 }),
         );
     }
@@ -325,6 +374,7 @@ const rowCount = computed(() =>
         <TaskBanner
             :level="level"
             :hint-text="hintText"
+            :reviewing="reviewing"
             @back="emit('back')"
             @show-hint="revealHint"
         />
@@ -356,8 +406,42 @@ const rowCount = computed(() =>
         </div>
 
         <div class="pb-8">
+            <div
+                v-if="reviewing"
+                class="mx-auto flex w-full max-w-xl flex-col items-center gap-4"
+            >
+                <div
+                    class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="font-mono text-xs font-semibold text-accent">
+                            {{ solution?.relation ?? '…' }}
+                        </p>
+                        <StarRating :stars="progress.starsFor(level.id)" />
+                    </div>
+                    <p
+                        v-if="solution"
+                        class="mt-1 text-sm text-slate-600 dark:text-slate-300"
+                    >
+                        {{ relationDescriptions[solution.relation] }}
+                    </p>
+                    <code
+                        v-if="solution?.statement"
+                        class="mt-2 block overflow-x-auto font-mono text-xs text-slate-800 dark:text-slate-200"
+                    >
+                        {{ solution.statement }}
+                    </code>
+                </div>
+                <button
+                    type="button"
+                    class="rounded-xl bg-accent px-5 py-2.5 font-semibold text-white shadow-lg shadow-accent/25 transition hover:brightness-110"
+                    @click="startReplay"
+                >
+                    Replay level ↺
+                </button>
+            </div>
             <p
-                v-if="level.mode === 'connect'"
+                v-else-if="level.mode === 'connect'"
                 class="text-center text-sm text-slate-400 dark:text-slate-500"
             >
                 Drag from a glowing dot to the matching column.
