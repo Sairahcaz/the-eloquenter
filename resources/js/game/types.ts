@@ -133,7 +133,7 @@ export interface LevelResult {
 export interface LevelSolution {
     connections: ConnectionDef[];
     relation: RelationType;
-    statement: string | null;
+    answers: Record<string, string> | null;
 }
 
 /**

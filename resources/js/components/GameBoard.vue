@@ -4,6 +4,7 @@ import { computed, onMounted, provide, reactive, ref } from 'vue';
 import AnswerChoices from '@/components/AnswerChoices.vue';
 import CodeCompletion from '@/components/CodeCompletion.vue';
 import ConnectionLayer from '@/components/ConnectionLayer.vue';
+import SolvedCodeSnippet from '@/components/SolvedCodeSnippet.vue';
 import StarRating from '@/components/StarRating.vue';
 import TableCard from '@/components/TableCard.vue';
 import TaskBanner from '@/components/TaskBanner.vue';
@@ -408,37 +409,38 @@ const rowCount = computed(() =>
         <div class="pb-8">
             <div
                 v-if="reviewing"
-                class="mx-auto flex w-full max-w-xl flex-col items-center gap-4"
+                class="mx-auto flex w-full max-w-2xl flex-col items-center gap-5"
             >
+                <SolvedCodeSnippet
+                    v-if="level.mode === 'code' && solution?.answers"
+                    :level="level"
+                    :answers="solution.answers"
+                />
                 <div
-                    class="w-full rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                    v-if="solution"
+                    class="flex flex-col items-center gap-3 sm:flex-row"
                 >
-                    <div class="flex items-center justify-between gap-3">
-                        <p class="font-mono text-xs font-semibold text-accent">
-                            {{ solution?.relation ?? '…' }}
-                        </p>
-                        <StarRating :stars="progress.starsFor(level.id)" />
-                    </div>
+                    <span
+                        class="shrink-0 rounded-xl border border-success bg-success/10 px-4 py-2 font-mono text-sm font-semibold text-success"
+                    >
+                        {{ solution.relation }}
+                    </span>
                     <p
-                        v-if="solution"
-                        class="mt-1 text-sm text-slate-600 dark:text-slate-300"
+                        class="text-center text-sm text-slate-600 sm:text-left dark:text-slate-300"
                     >
                         {{ relationDescriptions[solution.relation] }}
                     </p>
-                    <code
-                        v-if="solution?.statement"
-                        class="mt-2 block overflow-x-auto font-mono text-xs text-slate-800 dark:text-slate-200"
-                    >
-                        {{ solution.statement }}
-                    </code>
                 </div>
-                <button
-                    type="button"
-                    class="rounded-xl bg-accent px-5 py-2.5 font-semibold text-white shadow-lg shadow-accent/25 transition hover:brightness-110"
-                    @click="startReplay"
-                >
-                    Replay level ↺
-                </button>
+                <div class="flex items-center gap-4">
+                    <StarRating :stars="progress.starsFor(level.id)" />
+                    <button
+                        type="button"
+                        class="rounded-xl bg-accent px-5 py-2.5 font-semibold text-white shadow-lg shadow-accent/25 transition hover:brightness-110"
+                        @click="startReplay"
+                    >
+                        Replay level ↺
+                    </button>
+                </div>
             </div>
             <p
                 v-else-if="level.mode === 'connect'"

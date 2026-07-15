@@ -32,16 +32,18 @@ class Referee
     }
 
     /**
-     * The full solution for reviewing a level the player already beat.
+     * The full solution for reviewing a level the player already beat. Code
+     * levels get the blank answers keyed by blank id, so the client can
+     * render the completed snippet.
      *
-     * @return array{connections: list<array{from: array{table: string, column: string}, to: array{table: string, column: string}}>, relation: string, statement: string|null}
+     * @return array{connections: list<array{from: array{table: string, column: string}, to: array{table: string, column: string}}>, relation: string, answers: array<string, string>|null}
      */
     public function solution(LevelDefinition $level): array
     {
         return [
             'connections' => $this->expectedConnections($level),
             'relation' => $this->extraction($level)->type->value,
-            'statement' => $level->mode === Mode::Code ? $this->codeStatement($level) : null,
+            'answers' => $level->mode === Mode::Code ? $this->codeAnswers($level) : null,
         ];
     }
 

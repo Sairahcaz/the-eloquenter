@@ -255,11 +255,11 @@ it('reveals the solution only after completing the level', function () {
         ->assertJson([
             'connections' => [expectedConnectionFor('c1-l1')],
             'relation' => 'hasOne',
-            'statement' => null,
+            'answers' => null,
         ]);
 });
 
-it('includes the code statement in a code level solution', function () {
+it('includes the blank answers in a code level solution', function () {
     $player = playerAt('c1-l3');
 
     LevelCompletion::factory()->create([
@@ -268,10 +268,12 @@ it('includes the code statement in a code level solution', function () {
         'stars' => 3,
     ]);
 
-    $response = $this->getJson(route('levels.solution', 'c1-l3'))->assertSuccessful();
-
-    expect($response->json('relation'))->toBe('hasOne')
-        ->and($response->json('statement'))->toContain('hasOne');
+    $this->getJson(route('levels.solution', 'c1-l3'))
+        ->assertSuccessful()
+        ->assertJson([
+            'relation' => 'hasOne',
+            'answers' => codeAnswersFor('c1-l3'),
+        ]);
 });
 
 it('judges guesses server-side', function () {
