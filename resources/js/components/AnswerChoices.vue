@@ -63,7 +63,7 @@ function pick(choice: RelationType): void {
                 :key="choice"
                 type="button"
                 :disabled="solvedChoice !== null || wrongPicks.has(choice)"
-                class="rounded-xl border px-4 py-3 font-mono text-sm font-semibold transition active:scale-[0.98]"
+                class="rounded-xl border px-3 py-3.5 font-mono text-base font-semibold transition active:scale-[0.98] sm:px-4 sm:py-3 sm:text-sm"
                 :class="{
                     'animate-shake border-danger bg-danger/10 text-danger':
                         wrongPicks.has(choice),

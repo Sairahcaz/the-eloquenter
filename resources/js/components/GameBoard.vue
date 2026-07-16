@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { useHttp } from '@inertiajs/vue3';
-import { computed, onMounted, provide, reactive, ref } from 'vue';
+import {
+    computed,
+    onBeforeUnmount,
+    onMounted,
+    provide,
+    reactive,
+    ref,
+} from 'vue';
 import AnswerChoices from '@/components/AnswerChoices.vue';
 import CodeCompletion from '@/components/CodeCompletion.vue';
 import ConnectionLayer from '@/components/ConnectionLayer.vue';
@@ -53,6 +60,16 @@ const shakeSignals = reactive<Record<string, number>>({});
 const reviewing = ref(progress.isCompleted(props.level.id));
 const solution = ref<LevelSolution | null>(null);
 
+// Below md the grid stacks into one column. SSR can't know the viewport,
+// so the flag starts false and syncs after mount to keep hydration stable.
+const stacked = ref(false);
+
+let stackedQuery: MediaQueryList | null = null;
+
+function syncStacked(): void {
+    stacked.value = stackedQuery?.matches ?? false;
+}
+
 const attemptHttp = useHttp({});
 const connectionHttp = useHttp<
     { from: ColumnRef | null; to: ColumnRef | null },
@@ -64,6 +81,10 @@ const solutionHttp = useHttp<Record<string, never>, LevelSolution>({});
 // Every fresh level open resets the server-side attempt, so mistakes from
 // an earlier run don't bleed into this one.
 onMounted(() => {
+    stackedQuery = window.matchMedia('(max-width: 767px)');
+    stackedQuery.addEventListener('change', syncStacked);
+    syncStacked();
+
     if (reviewing.value) {
         solutionHttp.get(solutionRoute.url(props.level.id), {
             onSuccess: (response) => (solution.value = response),
@@ -71,6 +92,10 @@ onMounted(() => {
     } else {
         attemptHttp.post(attemptRoute.url(props.level.id));
     }
+});
+
+onBeforeUnmount(() => {
+    stackedQuery?.removeEventListener('change', syncStacked);
 });
 
 function startReplay(): void {
@@ -87,6 +112,18 @@ const tableCols = computed(() =>
     Object.fromEntries(
         props.level.tables.map((table) => [table.id, table.position.col]),
     ),
+);
+
+// Stacked boards ignore the grid positions; the reading order left-to-right,
+// top-to-bottom becomes top-to-bottom.
+const orderedTables = computed(() =>
+    stacked.value
+        ? [...props.level.tables].sort(
+              (a, b) =>
+                  a.position.col - b.position.col ||
+                  a.position.row - b.position.row,
+          )
+        : props.level.tables,
 );
 
 function touchesRef(connection: ConnectionDef, ref: ColumnRef): boolean {
@@ -131,6 +168,12 @@ function answerSide(ref: ColumnRef): AnchorSide {
 // otherwise the dot placement leaks which column belongs to which neighbour.
 // Middle-column tables therefore expose every dot on both sides.
 function dotSides(ref: ColumnRef): AnchorSide[] {
+    // Stacked cards sit on top of each other, so every connection arcs
+    // alongside the right edge instead of crossing between columns.
+    if (stacked.value) {
+        return ['right'];
+    }
+
     if (props.level.mode !== 'connect') {
         return [answerSide(ref)];
     }
@@ -370,7 +413,7 @@ const rowCount = computed(() =>
 
 <template>
     <div
-        class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-6 py-8"
+        class="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-6 md:px-6 md:py-8"
     >
         <TaskBanner
             :level="level"
@@ -382,21 +425,22 @@ const rowCount = computed(() =>
 
         <div
             ref="boardEl"
-            class="relative grid grid-cols-3 items-center justify-items-center gap-x-8 rounded-2xl border border-slate-200 bg-white/60 px-4 py-12 dark:border-slate-800 dark:bg-slate-900/40"
-            :class="[
-                interactive ? 'touch-none' : '',
-                rowCount > 1 ? 'gap-y-12' : '',
-            ]"
+            class="relative grid grid-cols-1 items-center justify-items-center gap-y-10 rounded-2xl border border-slate-200 bg-white/60 px-3 py-8 md:grid-cols-3 md:gap-x-8 md:px-4 md:py-12 dark:border-slate-800 dark:bg-slate-900/40"
+            :class="rowCount > 1 ? 'md:gap-y-12' : 'md:gap-y-0'"
         >
             <TableCard
-                v-for="table in level.tables"
+                v-for="table in orderedTables"
                 :key="table.id"
                 :table="table"
                 :shake-signal="shakeSignals[table.id]"
-                :style="{
-                    gridColumn: table.position.col,
-                    gridRow: table.position.row,
-                }"
+                :style="
+                    stacked
+                        ? undefined
+                        : {
+                              gridColumn: table.position.col,
+                              gridRow: table.position.row,
+                          }
+                "
             />
             <ConnectionLayer
                 :width="registry.boardSize.width"
@@ -426,7 +470,7 @@ const rowCount = computed(() =>
                         {{ solution.relation }}
                     </span>
                     <p
-                        class="text-center text-sm text-slate-600 sm:text-left dark:text-slate-300"
+                        class="text-center text-base text-slate-600 sm:text-left sm:text-sm dark:text-slate-300"
                     >
                         {{ relationDescriptions[solution.relation] }}
                     </p>
@@ -444,7 +488,7 @@ const rowCount = computed(() =>
             </div>
             <p
                 v-else-if="level.mode === 'connect'"
-                class="text-center text-sm text-slate-400 dark:text-slate-500"
+                class="text-center text-base text-slate-400 sm:text-sm dark:text-slate-500"
             >
                 Drag from a glowing dot to the matching column.
                 <span class="ml-2 font-mono text-xs"

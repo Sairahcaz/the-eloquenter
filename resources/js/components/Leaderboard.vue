@@ -41,7 +41,7 @@ function formatDuration(seconds: number): string {
         </h2>
         <p
             v-if="highscores.length === 0"
-            class="mt-3 text-sm text-slate-400 dark:text-slate-500"
+            class="mt-3 text-base text-slate-400 sm:text-sm dark:text-slate-500"
         >
             No scores yet. Be the first!
         </p>
@@ -49,7 +49,7 @@ function formatDuration(seconds: number): string {
             <li
                 v-for="(entry, index) in highscores"
                 :key="`${entry.stars}-${entry.seconds}`"
-                class="flex items-center justify-between gap-2 rounded-lg py-1.5 pr-4 pl-3 text-sm"
+                class="flex items-center justify-between gap-2 rounded-lg py-2 pr-4 pl-3 text-base sm:py-1.5 sm:text-sm"
                 :class="
                     entry.names.includes(playerName)
                         ? 'bg-accent/10 font-semibold text-accent'

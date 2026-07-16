@@ -159,14 +159,14 @@ function run(): void {
                 v-for="option in activeOptions"
                 :key="option"
                 type="button"
-                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-sm text-slate-800 shadow-sm transition hover:border-accent hover:text-accent active:scale-[0.97] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                class="rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 font-mono text-base text-slate-800 shadow-sm transition hover:border-accent hover:text-accent active:scale-[0.97] sm:px-3 sm:py-1.5 sm:text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 @click="pickOption(option)"
             >
                 {{ option }}
             </button>
             <span
                 v-if="!activeBlankId && !allFilled"
-                class="text-sm text-slate-400"
+                class="text-base text-slate-400 sm:text-sm"
                 >Select a blank to fill it.</span
             >
         </div>

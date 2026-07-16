@@ -21,7 +21,7 @@ watch(
 
 <template>
     <div
-        class="w-52 rounded-xl border bg-white shadow-md sm:w-56 dark:bg-slate-900"
+        class="w-60 rounded-xl border bg-white shadow-md md:w-52 lg:w-56 dark:bg-slate-900"
         :class="[
             shaking
                 ? 'animate-shake border-danger'

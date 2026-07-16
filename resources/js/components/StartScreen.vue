@@ -61,7 +61,7 @@ function submit(): void {
 
 <template>
     <div
-        class="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-10"
+        class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8 sm:px-6 sm:py-10"
     >
         <div
             class="absolute -top-40 left-1/2 size-[36rem] -translate-x-1/2 rounded-full bg-accent/15 blur-3xl"
@@ -87,7 +87,7 @@ function submit(): void {
                 <img
                     src="/images/eloquenter-hero.jpg"
                     alt="The Eloquenter: Learn Eloquent, gamified"
-                    class="max-h-72 w-full object-cover object-top"
+                    class="max-h-52 w-full object-cover object-top sm:max-h-72"
                 />
                 <div
                     class="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-white dark:from-slate-900"
@@ -96,7 +96,7 @@ function submit(): void {
             </div>
 
             <div
-                class="grid gap-8 p-8 sm:p-10"
+                class="grid gap-8 p-6 sm:p-10"
                 :class="highscores.length > 0 ? 'sm:grid-cols-2' : ''"
             >
                 <div class="flex flex-col gap-4">
@@ -128,7 +128,7 @@ function submit(): void {
                         </button>
                         <button
                             type="button"
-                            class="text-sm text-slate-500 transition hover:text-accent dark:text-slate-400"
+                            class="py-1 text-base text-slate-500 transition hover:text-accent sm:text-sm dark:text-slate-400"
                             @click="switchPlayer"
                         >
                             Not {{ knownPlayer }}? Start fresh (resets progress)
@@ -164,7 +164,7 @@ function submit(): void {
                         <p
                             v-if="nameError"
                             id="player-name-error"
-                            class="text-center text-sm text-red-500 dark:text-red-400"
+                            class="text-center text-base text-red-500 sm:text-sm dark:text-red-400"
                         >
                             {{ nameError }}
                         </p>

@@ -58,7 +58,9 @@ function setDotEl(side: AnchorSide, el: unknown): void {
 </script>
 
 <template>
-    <li class="relative flex items-center justify-between gap-3 px-3 py-1.5">
+    <li
+        class="relative flex items-center justify-between gap-3 px-3 py-2 sm:py-1.5"
+    >
         <span
             class="flex items-center gap-1.5 font-mono text-xs text-slate-700 dark:text-slate-300"
         >
@@ -86,8 +88,12 @@ function setDotEl(side: AnchorSide, el: unknown): void {
                 :data-table="tableId"
                 :data-column="column.name"
                 :aria-label="`Connect ${tableId}.${column.name}`"
-                class="absolute top-1/2 -translate-y-1/2 touch-none p-2"
-                :class="side === 'left' ? '-left-3.5' : '-right-3.5'"
+                class="absolute top-1/2 -translate-y-1/2 touch-none p-2.5 sm:p-2"
+                :class="
+                    side === 'left'
+                        ? '-left-4 sm:-left-3.5'
+                        : '-right-4 sm:-right-3.5'
+                "
                 @pointerdown="board.startDrag(columnRef, $event)"
             >
                 <span

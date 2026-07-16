@@ -72,7 +72,7 @@ const progressShareText = computed(
 </script>
 
 <template>
-    <div class="mx-auto w-full max-w-6xl px-6 py-10">
+    <div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div class="flex flex-col gap-10">
             <header class="flex flex-wrap items-end justify-between gap-6">
                 <div>
@@ -86,9 +86,9 @@ const progressShareText = computed(
                         relations.
                     </p>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <p
-                        class="font-display text-3xl tracking-wide text-slate-900 dark:text-white"
+                        class="font-display text-2xl tracking-wide text-slate-900 sm:text-3xl dark:text-white"
                     >
                         Agent
                         <span class="text-accent">{{
@@ -100,7 +100,7 @@ const progressShareText = computed(
                         aria-hidden="true"
                     />
                     <p
-                        class="flex items-center gap-2 font-display text-3xl tracking-wide text-slate-900 tabular-nums dark:text-white"
+                        class="flex items-center gap-2 font-display text-2xl tracking-wide text-slate-900 tabular-nums sm:text-3xl dark:text-white"
                     >
                         <svg
                             viewBox="0 0 24 24"
@@ -200,7 +200,7 @@ const progressShareText = computed(
                                     >
                                         <span class="min-w-0">
                                             <span
-                                                class="block truncate text-sm font-medium text-slate-700 dark:text-slate-300"
+                                                class="block truncate text-base font-medium text-slate-700 sm:text-sm dark:text-slate-300"
                                                 >{{ level.title }}</span
                                             >
                                             <span
@@ -239,7 +239,7 @@ const progressShareText = computed(
                         <button
                             type="button"
                             :disabled="highscores.current_page === 1"
-                            class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400"
+                            class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-xs dark:border-slate-700 dark:text-slate-400"
                             @click="
                                 goToHighscorePage(highscores.current_page - 1)
                             "
@@ -257,7 +257,7 @@ const progressShareText = computed(
                             :disabled="
                                 highscores.current_page === highscores.last_page
                             "
-                            class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400"
+                            class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-xs dark:border-slate-700 dark:text-slate-400"
                             @click="
                                 goToHighscorePage(highscores.current_page + 1)
                             "

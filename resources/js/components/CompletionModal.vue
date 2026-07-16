@@ -30,10 +30,10 @@ const praise = computed(() => {
 
 <template>
     <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm sm:p-6"
     >
         <div
-            class="w-full max-w-md animate-pop-in rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            class="max-h-full w-full max-w-md animate-pop-in overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-2xl sm:p-8 dark:border-slate-700 dark:bg-slate-900"
         >
             <template v-if="finale">
                 <p
@@ -42,7 +42,7 @@ const praise = computed(() => {
                     Game complete
                 </p>
                 <h2
-                    class="mt-3 animate-pop-in font-display text-5xl tracking-wide text-balance"
+                    class="mt-3 animate-pop-in font-display text-4xl tracking-wide text-balance sm:text-5xl"
                 >
                     <span
                         class="bg-linear-to-r from-accent via-star to-accent bg-clip-text text-transparent drop-shadow-[0_0_18px_var(--color-accent)]"
@@ -67,7 +67,7 @@ const praise = computed(() => {
                 <StarRating :stars="stars" animated size="lg" />
             </div>
 
-            <p class="text-sm text-slate-500 dark:text-slate-400">
+            <p class="text-base text-slate-500 sm:text-sm dark:text-slate-400">
                 {{
                     finale
                         ? 'Every relation mastered. Somewhere out there, raw SQL just got a little quieter.'
@@ -81,7 +81,9 @@ const praise = computed(() => {
                 <p class="font-mono text-xs font-semibold text-accent">
                     {{ relation }}
                 </p>
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                <p
+                    class="mt-1 text-base text-slate-600 sm:text-sm dark:text-slate-300"
+                >
                     {{ relationDescriptions[relation] }}
                 </p>
                 <code
@@ -104,7 +106,7 @@ const praise = computed(() => {
                 <ShareOnXButton :text="shareText" />
             </div>
 
-            <div class="mt-6 flex justify-center gap-3">
+            <div class="mt-6 flex flex-wrap justify-center gap-3">
                 <button
                     type="button"
                     class="rounded-xl border border-slate-200 px-5 py-2.5 font-medium text-slate-600 transition hover:border-slate-400 dark:border-slate-700 dark:text-slate-300"
